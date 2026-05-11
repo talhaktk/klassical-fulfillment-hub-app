@@ -7,7 +7,7 @@ interface ChatMessage { role: 'user' | 'assistant'; content: string }
 export default function AIChat({ onClose }: { onClose: () => void }) {
   const { stats, orders, inventory } = useStore()
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: 'Hi! I\'m your Klassical warehouse AI. Ask me anything about orders, inventory, billing, or get operational insights.' }
+    { role: 'assistant', content: 'Hi! I\'m your Klassical warehouse AI. Ask me about stock levels ("How many units of SKU X?"), orders, invoices, low stock alerts, or any operational insight.' }
   ])
   const [input, setInput]   = useState('')
   const [loading, setLoading] = useState(false)
@@ -24,7 +24,12 @@ export default function AIChat({ onClose }: { onClose: () => void }) {
     setLoading(true)
 
     try {
-      const contextNote = `[Context: ${stats.pendingOrders} pending orders, ${stats.lowStockAlerts} low-stock SKUs, ${stats.overdueInvoices} overdue invoices, £${stats.totalCash.toFixed(2)} cash]`
+      const inventorySummary = inventory.slice(0, 80).map(i => ({
+        sku: i.sku, name: i.product_name, variant: i.variant,
+        available: i.good_stock - i.reserved, reserved: i.reserved,
+        location: i.warehouse_location, seller: (i as any).sellers?.name,
+      }))
+      const contextNote = `[Warehouse context — Stats: ${stats.pendingOrders} pending orders, ${stats.lowStockAlerts} low-stock SKUs, ${stats.overdueInvoices} overdue invoices, £${stats.totalCash.toFixed(2)} total cash. Inventory (${inventory.length} SKUs): ${JSON.stringify(inventorySummary)}]`
       const apiMessages = [
         { role: 'user', content: contextNote },
         ...next.map(m => ({ role: m.role, content: m.content })),
@@ -92,7 +97,7 @@ export default function AIChat({ onClose }: { onClose: () => void }) {
           <input
             className="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
             style={{ background: 'rgba(255,255,255,.07)', color: 'white', border: '1px solid rgba(255,255,255,.12)' }}
-            placeholder="Ask about orders, stock, billing…"
+            placeholder="e.g. How many units of SKU X? Low stock?"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}

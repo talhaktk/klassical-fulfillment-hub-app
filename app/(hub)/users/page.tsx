@@ -47,7 +47,13 @@ export default function UsersPage() {
   const [modal,   setModal]   = useState<Partial<UserProfile> & { isNew?: boolean } | null>(null)
   const [saving,  setSaving]  = useState(false)
 
-  const isAdmin = currentUser?.role === 'admin'
+  const isAdmin   = currentUser?.role === 'admin'
+  const canManage = isAdmin || currentUser?.role === 'warehouse_manager'
+
+  // Roles a warehouse_manager can assign (not admin, not another manager)
+  const allowedRoles: Role[] = isAdmin
+    ? ['admin', 'warehouse_manager', 'warehouse_staff', 'seller']
+    : ['warehouse_staff', 'seller']
 
   async function loadUsers() {
     setLoading(true)
@@ -105,7 +111,7 @@ export default function UsersPage() {
   }
 
   async function handleToggleStatus(user: UserProfile) {
-    if (!isAdmin) return
+    if (!canManage) return
     const db = getSupabaseClient()
     const newStatus = user.status === 'active' ? 'inactive' : 'active'
     const { error } = await db.from('user_profiles').update({ status: newStatus }).eq('id', user.id)
@@ -125,7 +131,7 @@ export default function UsersPage() {
             {users.filter(u => u.status === 'active').length} active users · role-based access control
           </p>
         </div>
-        {isAdmin && (
+        {canManage && (
           <button
             className="btn-gold btn-sm"
             onClick={() => setModal({ isNew: true, name: '', email: '', role: 'warehouse_staff', seller_id: null, status: 'active' })}
@@ -163,7 +169,7 @@ export default function UsersPage() {
         ) : (
           <table className="kh-table">
             <thead>
-              <tr><th>User</th><th>Email</th><th>Role</th><th>Status</th>{isAdmin && <th>Actions</th>}</tr>
+              <tr><th>User</th><th>Email</th><th>Role</th><th>Status</th>{canManage && <th>Actions</th>}</tr>
             </thead>
             <tbody>
               {users.map(u => (
@@ -189,7 +195,7 @@ export default function UsersPage() {
                       {u.status.charAt(0).toUpperCase() + u.status.slice(1)}
                     </span>
                   </td>
-                  {isAdmin && (
+                  {canManage && (
                     <td>
                       <div className="flex gap-1">
                         <button className="btn-ghost btn-sm" onClick={() => setModal({ ...u, isNew: false })}>✏️ Edit</button>
@@ -227,7 +233,7 @@ export default function UsersPage() {
               <div>
                 <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">Role</label>
                 <select className="kh-input w-full" value={modal.role ?? 'warehouse_staff'} onChange={e => setModal(m => m ? { ...m, role: e.target.value as Role, seller_id: e.target.value !== 'seller' ? null : m.seller_id } : m)}>
-                  {(Object.keys(ROLE_LABELS) as Role[]).map(r => (
+                  {allowedRoles.map(r => (
                     <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                   ))}
                 </select>
