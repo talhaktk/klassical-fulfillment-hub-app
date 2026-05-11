@@ -1,27 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+:root { --sidebar-w: 234px; }
+* { box-sizing: border-box; }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'DM Sans', sans-serif;
+  background: #F4F6FA;
+  color: #0E2040;
+  height: 100vh;
+  overflow: hidden;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #F4F6FA; }
+::-webkit-scrollbar-thumb { background: #9E7410; border-radius: 3px; }
+
+@keyframes scan {
+  0%, 100% { top: 0; }
+  50% { top: calc(100% - 2px); }
+}
+.scan-line { animation: scan 2s ease-in-out infinite; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn 0.2s ease; }
+
+@layer components {
+  .badge       { @apply inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold; }
+  .badge-green { @apply bg-emerald-100 text-emerald-800; }
+  .badge-yellow{ @apply bg-yellow-100  text-yellow-800; }
+  .badge-red   { @apply bg-red-100     text-red-800; }
+  .badge-blue  { @apply bg-blue-100    text-blue-800; }
+  .badge-navy  { @apply bg-slate-100   text-slate-700; }
+  .badge-gray  { @apply bg-gray-100    text-gray-600; }
+  .badge-orange{ @apply bg-orange-100  text-orange-800; }
+
+  .kh-card     { @apply bg-white border border-[#E8ECF2] rounded-xl p-5; transition: box-shadow .2s; }
+  .stat-card   { @apply bg-white border border-[#E8ECF2] rounded-xl p-4; border-top: 3px solid #C8971A; }
+
+  .btn-gold {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer text-white border-0;
+    background: linear-gradient(135deg, #9E7410, #D4A520);
+    transition: all .15s;
   }
+  .btn-gold:hover { background: linear-gradient(135deg,#D4A520,#E8B830); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(200,151,26,.35); }
+
+  .btn-navy { @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer text-white border-0 bg-[#1B3A6B] transition-all; }
+  .btn-navy:hover { background-color: #142D56; }
+
+  .btn-ghost { @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer bg-transparent text-[#1B3A6B] border border-[#B8C4D4] transition-all; }
+  .btn-ghost:hover { background-color: #F4F6FA; border-color: #1B3A6B; }
+
+  .btn-sm { @apply !px-3 !py-1.5 !text-xs; }
+
+  .kh-input { @apply bg-white border border-[#B8C4D4] rounded-lg text-[#0E2040] py-2 px-3 text-sm w-full outline-none transition-all; }
+  .kh-input:focus { border-color: #D4A520; box-shadow: 0 0 0 3px rgba(200,151,26,.12); }
+
+  .pb  { @apply bg-[#E8ECF2] rounded h-1.5 overflow-hidden; }
+  .pf  { @apply h-full rounded; background: linear-gradient(90deg,#9E7410,#E8B830); transition: width .5s ease; }
+
+  .kh-table { @apply w-full border-collapse text-sm; }
+  .kh-table th { @apply px-3.5 py-2.5 text-left text-[10px] uppercase tracking-wider text-[#7A8BA0] font-bold; border-bottom: 2px solid #E8ECF2; }
+  .kh-table td { @apply px-3.5 py-2.5 text-[#0E2040]; border-bottom: 1px solid #E8ECF2; }
+  .kh-table tr:hover td { background: #F8F9FC; }
 }

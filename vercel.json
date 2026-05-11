@@ -1,0 +1,13 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL":      "@klassical-supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@klassical-supabase-anon-key",
+    "SUPABASE_SERVICE_ROLE_KEY":     "@klassical-supabase-service-key",
+    "OPENAI_API_KEY":                "@klassical-openai-key",
+    "NEXT_PUBLIC_APP_URL":           "@klassical-app-url"
+  }
+}
