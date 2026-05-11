@@ -2,14 +2,51 @@
 import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { useStore } from '@/store'
+import { getSupabaseClient } from '@/lib/supabase/client'
 
 export default function AppProvider({ children }: { children: React.ReactNode }) {
-  const { loadAll, subscribeRealtime, initialized } = useStore()
+  const { loadAll, subscribeRealtime, initialized, setCurrentUser, setRole } = useStore()
 
   useEffect(() => {
-    if (!initialized) loadAll()
+    const supabase = getSupabaseClient()
+
+    async function loadUserAndData() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        if (profile) {
+          setCurrentUser({
+            id:        session.user.id,
+            name:      profile.name,
+            email:     session.user.email ?? '',
+            role:      profile.role,
+            seller_id: profile.seller_id ?? null,
+          })
+          setRole(profile.role)
+        }
+      }
+
+      if (!initialized) loadAll()
+    }
+
+    loadUserAndData()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setCurrentUser(null)
+      }
+    })
+
     const unsub = subscribeRealtime()
-    return unsub
+    return () => {
+      unsub()
+      subscription.unsubscribe()
+    }
   }, [])
 
   return (

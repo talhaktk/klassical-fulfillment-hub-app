@@ -7,7 +7,19 @@ import type {
 
 type Role = 'warehouse_manager' | 'warehouse_staff' | 'seller' | 'admin'
 
+export interface CurrentUser {
+  id:        string
+  name:      string
+  email:     string
+  role:      Role
+  seller_id: string | null
+}
+
 interface AppState {
+  // ── Auth ──────────────────────────────────────────────────
+  currentUser:    CurrentUser | null
+  setCurrentUser: (u: CurrentUser | null) => void
+
   // ── Role ──────────────────────────────────────────────────
   role: Role
   setRole: (r: Role) => void
@@ -112,6 +124,9 @@ function computeStats(
 let grnCounter = 41
 
 export const useStore = create<AppState>((set, get) => ({
+  currentUser: null,
+  setCurrentUser: (currentUser) => set({ currentUser }),
+
   role: 'warehouse_manager',
   setRole: (role) => set({ role }),
 

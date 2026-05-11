@@ -2,6 +2,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useStore } from '@/store'
 import { fmtGBP } from '@/lib/utils'
+import { getSupabaseClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 const AIChat = dynamic(() => import('@/components/ai/AIChat'), { ssr: false })
 
@@ -15,21 +17,29 @@ const ROLES = [
 const ROLE_LABELS: Record<string, string> = {
   warehouse_manager: 'Warehouse Manager',
   warehouse_staff:   'WH Staff',
-  seller:            'Seller — TechGear UK',
+  seller:            'Seller',
   admin:             'Super Admin',
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('')
+}
+
 export default function Topbar() {
-  const { role, setRole, stats, invoices } = useStore()
-  const [clock, setClock]               = useState('')
-  const [notifOpen, setNotifOpen]       = useState(false)
-  const [chatOpen, setChatOpen]         = useState(false)
-  const notifRef                        = useRef<HTMLDivElement>(null)
+  const { role, setRole, stats, invoices, currentUser } = useStore()
+  const [clock, setClock]         = useState('')
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [chatOpen, setChatOpen]   = useState(false)
+  const notifRef                  = useRef<HTMLDivElement>(null)
+  const router                    = useRouter()
 
   useEffect(() => {
-    const tick = () => {
-      setClock(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
-    }
+    const tick = () => setClock(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
@@ -43,7 +53,18 @@ export default function Topbar() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  async function handleLogout() {
+    await getSupabaseClient().auth.signOut()
+    router.push('/auth/login')
+  }
+
   const overdueInvoices = invoices.filter(i => i.status === 'overdue')
+
+  const sellerLabel = currentUser?.role === 'seller' && currentUser?.seller_id
+    ? `Seller`
+    : ROLE_LABELS[role] ?? role
+
+  const initials = currentUser ? getInitials(currentUser.name) : '?'
 
   return (
     <>
@@ -68,24 +89,27 @@ export default function Topbar() {
         </div>
       </div>
 
-      {/* Role selector */}
-      <select
-        value={role}
-        onChange={e => setRole(e.target.value as any)}
-        className="ml-4 rounded-lg px-2.5 py-1.5 text-xs outline-none"
-        style={{
-          background: 'rgba(255,255,255,.08)',
-          border: '1px solid rgba(200,151,26,.4)',
-          color: '#D4A520',
-          fontFamily: 'DM Sans, sans-serif',
-        }}
-      >
-        {ROLES.map(r => (
-          <option key={r.value} value={r.value} style={{ background: '#0E2040', color: 'white' }}>
-            {r.label}
-          </option>
-        ))}
-      </select>
+      {/* Role selector — visible to admins only for previewing */}
+      {currentUser?.role === 'admin' && (
+        <select
+          value={role}
+          onChange={e => setRole(e.target.value as any)}
+          className="ml-4 rounded-lg px-2.5 py-1.5 text-xs outline-none"
+          style={{
+            background: 'rgba(255,255,255,.08)',
+            border: '1px solid rgba(200,151,26,.4)',
+            color: '#D4A520',
+            fontFamily: 'DM Sans, sans-serif',
+          }}
+          title="Preview as role"
+        >
+          {ROLES.map(r => (
+            <option key={r.value} value={r.value} style={{ background: '#0E2040', color: 'white' }}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+      )}
 
       <div className="ml-auto flex items-center gap-2.5">
         {/* Clock */}
@@ -96,7 +120,7 @@ export default function Topbar() {
           className="rounded-full px-3.5 py-1 text-[11px] font-bold tracking-[.3px] text-white"
           style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)' }}
         >
-          {ROLE_LABELS[role]}
+          {sellerLabel}
         </span>
 
         {/* Notifications bell */}
@@ -146,6 +170,10 @@ export default function Topbar() {
                   </div>
                 </div>
               )}
+
+              {overdueInvoices.length === 0 && stats.lowStockAlerts === 0 && (
+                <p className="text-xs text-[#7A8BA0] text-center py-2">No new notifications</p>
+              )}
             </div>
           )}
         </div>
@@ -160,15 +188,17 @@ export default function Topbar() {
           🤖
         </button>
 
-        {/* Settings */}
+        {/* Logout */}
         <button
-          className="flex items-center justify-center rounded-lg w-9 h-9 text-sm"
+          onClick={handleLogout}
+          className="flex items-center justify-center rounded-lg w-9 h-9 text-sm transition-all"
           style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(200,151,26,.2)' }}
+          title="Sign out"
         >
-          ⚙️
+          🚪
         </button>
 
-        {/* Avatar */}
+        {/* Avatar with real initials */}
         <div
           className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold cursor-pointer border-2"
           style={{
@@ -177,8 +207,9 @@ export default function Topbar() {
             borderColor: '#C8971A',
             fontFamily: 'DM Mono, monospace',
           }}
+          title={currentUser?.name ?? ''}
         >
-          AK
+          {initials}
         </div>
       </div>
     </header>
