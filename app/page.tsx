@@ -8,6 +8,7 @@ import Services        from '@/components/site/Services'
 import Pricing         from '@/components/site/Pricing'
 import ComingSoon      from '@/components/site/ComingSoon'
 import Partners        from '@/components/site/Partners'
+import AppDownload     from '@/components/site/AppDownload'
 import Contact         from '@/components/site/Contact'
 import Footer          from '@/components/site/Footer'
 import WhatsAppFloat   from '@/components/site/WhatsAppFloat'
@@ -38,6 +39,7 @@ export default function LandingPage() {
         <Pricing />
         <ComingSoon />
         <Partners />
+        <AppDownload />
         <Contact />
       </main>
       <Footer />

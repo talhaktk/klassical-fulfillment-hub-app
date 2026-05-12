@@ -67,10 +67,10 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-2">
           <Link
             href="/auth/login"
-            className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
-            style={{ color: '#B8C4D4', borderColor: 'rgba(184,196,212,.3)' }}
+            className="px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5"
+            style={{ background: 'rgba(200,151,26,.15)', border: '1px solid rgba(200,151,26,.4)', color: '#D4A520' }}
           >
-            Login to Hub
+            🔐 Login to Hub
           </Link>
           <a
             href="#contact"

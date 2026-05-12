@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import PWAInstall from '@/components/site/PWAInstall'
 
 export default function Hero() {
   return (
@@ -43,7 +44,7 @@ export default function Hero() {
             Same-day dispatch, real-time inventory portal, custom branded unboxing — all managed from our Luton warehouse.
           </p>
 
-          <div className="flex flex-wrap gap-3 mb-10">
+          <div className="flex flex-wrap gap-3 mb-6">
             <a
               href="#contact"
               className="px-7 py-3.5 rounded-xl text-sm font-bold transition-all inline-flex items-center gap-2"
@@ -58,6 +59,22 @@ export default function Hero() {
             >
               View Pricing
             </a>
+          </div>
+
+          {/* Login + Install row */}
+          <div className="flex flex-wrap items-center gap-3 mb-10">
+            <Link
+              href="/auth/login"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: 'rgba(255,255,255,.09)',
+                border: '1px solid rgba(200,151,26,.45)',
+                color: '#D4A520',
+              }}
+            >
+              🔐 Staff Login — Fulfillment Hub
+            </Link>
+            <PWAInstall variant="hero" />
           </div>
 
           {/* Trust badges */}
