@@ -2,6 +2,13 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Always allow auth routes and API routes through
+  if (pathname.startsWith('/auth') || pathname.startsWith('/api')) {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({ request: { headers: request.headers } })
 
   const supabase = createServerClient(
@@ -28,14 +35,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-
-  if (!session && !isAuthRoute) {
+  if (!session) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
-  }
-
-  if (session && isAuthRoute) {
-    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return response
