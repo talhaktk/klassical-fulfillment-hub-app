@@ -2,41 +2,33 @@
 import { useEffect, useState, useRef } from 'react'
 import { useStore } from '@/store'
 import { fmtGBP } from '@/lib/utils'
-import { getSupabaseClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 const AIChat = dynamic(() => import('@/components/ai/AIChat'), { ssr: false })
 
-const ROLES = [
-  { value: 'warehouse_manager', label: '🏭 Warehouse Manager' },
-  { value: 'warehouse_staff',   label: '👷 Warehouse Staff' },
-  { value: 'seller',            label: '🛒 Seller Portal' },
-  { value: 'admin',             label: '🔐 Super Admin' },
-] as const
-
 const ROLE_LABELS: Record<string, string> = {
+  admin:             'Super Admin',
   warehouse_manager: 'Warehouse Manager',
   warehouse_staff:   'WH Staff',
   seller:            'Seller',
-  admin:             'Super Admin',
+}
+
+const ROLE_COLORS: Record<string, string> = {
+  admin:             'linear-gradient(135deg,#8B0000,#C0321E)',
+  warehouse_manager: 'linear-gradient(135deg,#1B3A6B,#2A6DC8)',
+  warehouse_staff:   'linear-gradient(135deg,#1B5E20,#2E7D32)',
+  seller:            'linear-gradient(135deg,#9E7410,#D4A520)',
 }
 
 function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(w => w[0].toUpperCase())
-    .join('')
+  return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
 }
 
 export default function Topbar() {
-  const { role, setRole, stats, invoices, currentUser } = useStore()
+  const { stats, invoices, currentUser } = useStore()
   const [clock, setClock]         = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
   const [chatOpen, setChatOpen]   = useState(false)
   const notifRef                  = useRef<HTMLDivElement>(null)
-  const router                    = useRouter()
 
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
@@ -53,126 +45,106 @@ export default function Topbar() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  async function handleLogout() {
-    await getSupabaseClient().auth.signOut()
-    router.push('/auth/login')
-  }
-
   const overdueInvoices = invoices.filter(i => i.status === 'overdue')
-
-  const sellerLabel = currentUser?.role === 'seller' && currentUser?.seller_id
-    ? `Seller`
-    : ROLE_LABELS[role] ?? role
-
-  const initials = currentUser ? getInitials(currentUser.name) : '?'
+  const userRole        = currentUser?.role ?? 'warehouse_staff'
+  const roleLabel       = ROLE_LABELS[userRole] ?? userRole
+  const roleColor       = ROLE_COLORS[userRole] ?? ROLE_COLORS.seller
+  const initials        = currentUser ? getInitials(currentUser.name) : '?'
+  const totalNotifs     = overdueInvoices.length + stats.lowStockAlerts
 
   return (
     <>
     <header
-      className="flex items-center px-5 flex-shrink-0 z-50 relative gap-3.5"
-      style={{ height: 58, background: '#0E2040', borderBottom: '2px solid #C8971A' }}
+      className="flex items-center px-6 flex-shrink-0 z-50 relative"
+      style={{ height: 60, background: '#0A1628', borderBottom: '1px solid rgba(200,151,26,.3)' }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-3">
-        <svg width="36" height="40" viewBox="0 0 38 44" fill="none">
-          <path d="M19 1L37 9V23C37 34 28 41 19 43C10 41 1 34 1 23V9L19 1Z" fill="#C8971A"/>
-          <path d="M19 3.5L35 11V23C35 32.5 27 39 19 41C11 39 3 32.5 3 23V11L19 3.5Z" fill="#1B3A6B"/>
-          <text x="6.5" y="30" fontSize="19" fontWeight="900" fill="#C8971A" fontFamily="Georgia,serif">KH</text>
-        </svg>
+      {/* Brand */}
+      <div className="flex items-center gap-3 mr-8">
+        <div
+          className="flex items-center justify-center rounded-xl font-black text-base"
+          style={{ width: 38, height: 38, background: 'linear-gradient(135deg,#C8971A,#E8B830)', color: '#0A1628', fontFamily: 'Georgia,serif', letterSpacing: -1 }}
+        >
+          KH
+        </div>
         <div>
-          <div className="text-sm font-bold text-white tracking-wide" style={{ fontFamily: 'Playfair Display, serif' }}>
-            KLASSICAL HOLDINGS
+          <div className="text-sm font-bold text-white leading-tight" style={{ fontFamily: 'Playfair Display, serif', letterSpacing: '.5px' }}>
+            Klassical Fulfillment HUB
           </div>
-          <div className="text-[9px] uppercase tracking-[1.5px] font-medium" style={{ color: '#D4A520' }}>
-            Fulfillment Hub · UK
+          <div className="text-[9px] uppercase tracking-[2px] font-medium" style={{ color: '#C8971A' }}>
+            Klassical Holdings · UK
           </div>
         </div>
       </div>
 
-      {/* Role selector — visible to admins only for previewing */}
-      {currentUser?.role === 'admin' && (
-        <select
-          value={role}
-          onChange={e => setRole(e.target.value as any)}
-          className="ml-4 rounded-lg px-2.5 py-1.5 text-xs outline-none"
-          style={{
-            background: 'rgba(255,255,255,.08)',
-            border: '1px solid rgba(200,151,26,.4)',
-            color: '#D4A520',
-            fontFamily: 'DM Sans, sans-serif',
-          }}
-          title="Preview as role"
-        >
-          {ROLES.map(r => (
-            <option key={r.value} value={r.value} style={{ background: '#0E2040', color: 'white' }}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      )}
+      {/* Centre spacer */}
+      <div className="flex-1" />
 
-      <div className="ml-auto flex items-center gap-2.5">
+      {/* Right controls */}
+      <div className="flex items-center gap-3">
         {/* Clock */}
-        <span className="text-xs font-mono" style={{ color: '#B8C4D4' }}>{clock}</span>
-
-        {/* Role badge */}
-        <span
-          className="rounded-full px-3.5 py-1 text-[11px] font-bold tracking-[.3px] text-white"
-          style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)' }}
-        >
-          {sellerLabel}
+        <span className="text-xs font-mono px-2.5 py-1 rounded-md" style={{ color: '#B8C4D4', background: 'rgba(255,255,255,.05)' }}>
+          {clock}
         </span>
 
-        {/* Notifications bell */}
+        {/* Role pill */}
+        <span
+          className="rounded-full px-3.5 py-1 text-[11px] font-bold tracking-wide text-white"
+          style={{ background: roleColor }}
+        >
+          {roleLabel}
+        </span>
+
+        {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button
             onClick={() => setNotifOpen(v => !v)}
-            className="relative flex items-center justify-center rounded-lg w-9 h-9 text-sm transition-all"
-            style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(200,151,26,.2)' }}
+            className="relative flex items-center justify-center rounded-xl w-9 h-9 text-sm transition-all"
+            style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)' }}
           >
             🔔
-            {stats.overdueInvoices > 0 && (
+            {totalNotifs > 0 && (
               <span
-                className="absolute top-1 right-1 w-2 h-2 rounded-full border-2"
-                style={{ background: '#E8B830', borderColor: '#0E2040' }}
-              />
+                className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-black px-1"
+                style={{ background: '#C0321E', color: 'white' }}
+              >
+                {totalNotifs}
+              </span>
             )}
           </button>
 
           {notifOpen && (
             <div
-              className="absolute right-0 top-11 w-80 rounded-[14px] p-4 z-50 animate-fadeIn"
-              style={{ background: 'white', border: '1px solid #E8ECF2', boxShadow: '0 12px 40px rgba(27,58,107,.18)' }}
+              className="absolute right-0 top-12 w-80 rounded-2xl p-4 z-50 animate-fadeIn"
+              style={{ background: 'white', border: '1px solid #E8ECF2', boxShadow: '0 16px 48px rgba(10,22,40,.2)' }}
             >
               <div className="flex justify-between items-center mb-3">
                 <span className="font-bold text-sm text-[#0E2040]">Notifications</span>
-                <span className="text-xs font-semibold" style={{ color: '#D4A520' }}>
-                  {overdueInvoices.length + stats.lowStockAlerts} new
-                </span>
+                {totalNotifs > 0 && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: '#FEF3E0', color: '#C8971A' }}>
+                    {totalNotifs} new
+                  </span>
+                )}
               </div>
-
-              {overdueInvoices.slice(0, 2).map(inv => (
-                <div key={inv.id} className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-[#F4F6FA] border-b border-[#E8ECF2]">
-                  <div className="w-2 h-2 rounded-full mt-1 flex-shrink-0 bg-red-500" />
+              {overdueInvoices.slice(0, 3).map(inv => (
+                <div key={inv.id} className="flex gap-2.5 p-2.5 rounded-xl mb-1 cursor-pointer hover:bg-[#F4F6FA] transition-colors">
+                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-red-500" />
                   <div>
-                    <div className="text-sm font-semibold text-[#0E2040]">Invoice overdue: {inv.invoice_number}</div>
-                    <div className="text-xs text-[#7A8BA0]">{inv.sellers?.name} · {fmtGBP(inv.total_amount - inv.paid_amount)}</div>
+                    <div className="text-sm font-semibold text-[#0E2040]">Overdue: {inv.invoice_number}</div>
+                    <div className="text-xs text-[#7A8BA0]">{(inv as any).sellers?.name} · {fmtGBP(inv.total_amount - inv.paid_amount)} due</div>
                   </div>
                 </div>
               ))}
-
               {stats.lowStockAlerts > 0 && (
-                <div className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-[#F4F6FA]">
-                  <div className="w-2 h-2 rounded-full mt-1 flex-shrink-0 bg-yellow-400" />
+                <div className="flex gap-2.5 p-2.5 rounded-xl cursor-pointer hover:bg-[#F4F6FA]">
+                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-amber-400" />
                   <div>
-                    <div className="text-sm font-semibold text-[#0E2040]">Low stock alerts</div>
+                    <div className="text-sm font-semibold text-[#0E2040]">Low stock alert</div>
                     <div className="text-xs text-[#7A8BA0]">{stats.lowStockAlerts} SKUs below threshold</div>
                   </div>
                 </div>
               )}
-
-              {overdueInvoices.length === 0 && stats.lowStockAlerts === 0 && (
-                <p className="text-xs text-[#7A8BA0] text-center py-2">No new notifications</p>
+              {totalNotifs === 0 && (
+                <p className="text-xs text-[#7A8BA0] text-center py-3">All clear — no alerts</p>
               )}
             </div>
           )}
@@ -181,32 +153,17 @@ export default function Topbar() {
         {/* AI Chat */}
         <button
           onClick={() => setChatOpen(v => !v)}
-          className="flex items-center justify-center rounded-lg w-9 h-9 text-sm transition-all"
-          style={{ background: chatOpen ? 'rgba(200,151,26,.3)' : 'rgba(255,255,255,.07)', border: '1px solid rgba(200,151,26,.2)' }}
           title="AI Assistant"
+          className="flex items-center justify-center rounded-xl w-9 h-9 text-sm transition-all"
+          style={{ background: chatOpen ? 'rgba(200,151,26,.3)' : 'rgba(255,255,255,.06)', border: `1px solid ${chatOpen ? 'rgba(200,151,26,.6)' : 'rgba(255,255,255,.1)'}` }}
         >
           🤖
         </button>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="flex items-center justify-center rounded-lg w-9 h-9 text-sm transition-all"
-          style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(200,151,26,.2)' }}
-          title="Sign out"
-        >
-          🚪
-        </button>
-
-        {/* Avatar with real initials */}
+        {/* Avatar */}
         <div
-          className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold cursor-pointer border-2"
-          style={{
-            background: 'linear-gradient(135deg,#9E7410,#E8B830)',
-            color: '#0E2040',
-            borderColor: '#C8971A',
-            fontFamily: 'DM Mono, monospace',
-          }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black cursor-pointer"
+          style={{ background: roleColor, color: 'white', fontFamily: 'DM Mono, monospace', letterSpacing: 1 }}
           title={currentUser?.name ?? ''}
         >
           {initials}

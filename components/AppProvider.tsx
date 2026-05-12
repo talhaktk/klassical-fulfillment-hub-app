@@ -12,23 +12,28 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
     async function loadUserAndData() {
       const { data: { session } } = await supabase.auth.getSession()
+
       if (session?.user) {
+        // Try user_profiles first
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', session.user.id)
           .single()
 
-        if (profile) {
-          setCurrentUser({
-            id:        session.user.id,
-            name:      profile.name,
-            email:     session.user.email ?? '',
-            role:      profile.role,
-            seller_id: profile.seller_id ?? null,
-          })
-          setRole(profile.role)
-        }
+        // Fallback: use user_metadata if profile missing
+        const meta = session.user.user_metadata ?? {}
+        const role  = profile?.role ?? meta.role ?? 'warehouse_staff'
+        const name  = profile?.name ?? meta.name ?? session.user.email?.split('@')[0] ?? 'User'
+
+        setCurrentUser({
+          id:        session.user.id,
+          name,
+          email:     session.user.email ?? '',
+          role,
+          seller_id: profile?.seller_id ?? null,
+        })
+        setRole(role)
       }
 
       if (!initialized) loadAll()
@@ -37,9 +42,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
     loadUserAndData()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        setCurrentUser(null)
-      }
+      if (!session) setCurrentUser(null)
     })
 
     const unsub = subscribeRealtime()
@@ -55,12 +58,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
       <Toaster
         position="top-right"
         toastOptions={{
-          style: {
-            fontFamily: 'DM Sans, sans-serif',
-            fontSize: 13,
-            borderRadius: 10,
-            border: '1px solid #E8ECF2',
-          },
+          style: { fontFamily: 'DM Sans, sans-serif', fontSize: 13, borderRadius: 10, border: '1px solid #E8ECF2' },
           success: { iconTheme: { primary: '#1A7A48', secondary: 'white' } },
           error:   { iconTheme: { primary: '#C0321E', secondary: 'white' } },
         }}

@@ -2,18 +2,51 @@
 import { useState } from 'react'
 import { useStore, type GRNPayload } from '@/store'
 import { fmtGBP, conditionBadge, statusBadge } from '@/lib/utils'
+import { getSupabaseClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
+import type { InventoryItem } from '@/types/database'
 
 type InvTab = 'stock' | 'variants' | 'damaged'
 
 export default function InventoryPage() {
-  const { inventory, sellers, receiveGRN } = useStore()
+  const { inventory, sellers, receiveGRN, loadInventory } = useStore()
   const [activeTab,  setActiveTab]  = useState<InvTab>('stock')
   const [searchQ,    setSearchQ]    = useState('')
   const [sellerF,    setSellerF]    = useState('all')
   const [showGRN,    setShowGRN]    = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [grnRef,     setGrnRef]     = useState(`GRN-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`)
+
+  // Quick restock state
+  const [restockItem, setRestockItem] = useState<InventoryItem | null>(null)
+  const [restockQty,  setRestockQty]  = useState(1)
+  const [restockNote, setRestockNote] = useState('')
+  const [restocking,  setRestocking]  = useState(false)
+
+  async function submitRestock() {
+    if (!restockItem || restockQty < 1) return
+    setRestocking(true)
+    try {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase
+        .from('inventory')
+        .update({
+          good_stock: restockItem.good_stock + restockQty,
+          total_in:   restockItem.total_in   + restockQty,
+        })
+        .eq('id', restockItem.id)
+      if (error) throw new Error(error.message)
+      toast.success(`+${restockQty} units added to ${restockItem.sku}`)
+      setRestockItem(null)
+      setRestockQty(1)
+      setRestockNote('')
+      await loadInventory()
+    } catch (e: any) {
+      toast.error(e.message ?? 'Restock failed')
+    } finally {
+      setRestocking(false)
+    }
+  }
 
   // GRN form state
   const [gSeller,   setGSeller]   = useState(sellers[0]?.id ?? '')
@@ -78,6 +111,52 @@ export default function InventoryPage() {
 
   return (
     <div className="p-6 animate-fadeIn">
+
+      {/* Quick Restock Modal */}
+      {restockItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(10,22,40,.55)' }}>
+          <div className="w-80 rounded-2xl p-5 shadow-2xl" style={{ background: 'white', border: '2px solid #C8971A' }}>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <div className="text-sm font-bold text-[#142D56]">Quick Restock</div>
+                <div className="text-xs text-[#7A8BA0] mt-0.5 font-mono">{restockItem.sku}</div>
+                <div className="text-xs text-[#0E2040] mt-0.5">{restockItem.product_name}{restockItem.variant ? ` — ${restockItem.variant}` : ''}</div>
+              </div>
+              <button onClick={() => setRestockItem(null)} className="text-[#7A8BA0] text-lg leading-none">✕</button>
+            </div>
+
+            <div className="mb-3 p-2.5 rounded-lg text-xs" style={{ background: '#F4F6FA' }}>
+              Current good stock: <strong className="text-[#1A7A48]">{restockItem.good_stock}</strong> units
+              {restockItem.reserved > 0 && <> · Reserved: <strong className="text-[#C85A00]">{restockItem.reserved}</strong></>}
+            </div>
+
+            <div className="mb-3">
+              <label className="text-xs text-[#7A8BA0] font-semibold block mb-1">Units to Add</label>
+              <input
+                type="number"
+                min={1}
+                className="kh-input w-full text-lg font-bold text-center"
+                style={{ color: '#1A7A48' }}
+                value={restockQty}
+                onChange={e => setRestockQty(Math.max(1, parseInt(e.target.value) || 1))}
+                autoFocus
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="text-xs text-[#7A8BA0] font-semibold block mb-1">Note (optional)</label>
+              <input className="kh-input w-full text-xs" placeholder="e.g. Top-up from reserve stock" value={restockNote} onChange={e => setRestockNote(e.target.value)} />
+            </div>
+
+            <div className="flex gap-2">
+              <button className="btn-ghost flex-1" onClick={() => setRestockItem(null)}>Cancel</button>
+              <button className="btn-gold flex-[2]" onClick={submitRestock} disabled={restocking}>
+                {restocking ? 'Adding…' : `Add ${restockQty} Unit${restockQty !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-start justify-between mb-5">
         <div>
@@ -225,7 +304,7 @@ export default function InventoryPage() {
               <tr>
                 <th>SKU</th><th>Product</th><th>Variant</th><th>Seller</th>
                 <th>Price</th><th>Total In</th><th>Damaged</th><th>Good</th>
-                <th>Reserved</th><th>Available</th><th>Location</th><th>Condition</th><th>Status</th>
+                <th>Reserved</th><th>Available</th><th>Location</th><th>Condition</th><th>Status</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -249,6 +328,16 @@ export default function InventoryPage() {
                     <td><span className="badge badge-gray text-xs">{item.warehouse_location ?? '—'}</span></td>
                     <td><span className={`badge ${conditionBadge(item.condition)} text-xs`}>{item.condition}</span></td>
                     <td><span className={`badge ${st} text-xs`}>{avail <= 0 ? 'Out of Stock' : avail <= 5 ? 'Low Stock' : 'In Stock'}</span></td>
+                    <td>
+                      <button
+                        onClick={() => { setRestockItem(item); setRestockQty(1); setRestockNote('') }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all hover:opacity-90"
+                        style={{ background: 'linear-gradient(135deg,#1A7A48,#27AE60)', color: 'white', whiteSpace: 'nowrap' }}
+                        title="Quick restock — add units to this SKU"
+                      >
+                        + Restock
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
