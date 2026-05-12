@@ -26,7 +26,10 @@ export default function PaymentsPage() {
 
   const acct = activeAcct ? bankAccounts.find(a => a.id === activeAcct) : null
 
-  const unpaidInvoices = invoices.filter(i => i.status !== 'paid')
+  // Filter invoices to the selected seller so the link is always relevant
+  const unpaidInvoices = invoices.filter(i =>
+    i.status !== 'paid' && (!form.seller_id || i.seller_id === form.seller_id)
+  )
 
   async function handleSave() {
     if (!form.account_id || !form.description || !form.amount) return
@@ -158,7 +161,11 @@ export default function PaymentsPage() {
               </div>
               <div>
                 <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">Seller (optional)</label>
-                <select className="kh-input w-full" value={form.seller_id ?? ''} onChange={e => setForm(f => ({ ...f, seller_id: e.target.value || undefined }))}>
+                <select
+                  className="kh-input w-full"
+                  value={form.seller_id ?? ''}
+                  onChange={e => setForm(f => ({ ...f, seller_id: e.target.value || undefined, invoice_id: undefined }))}
+                >
                   <option value="">None</option>
                   {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>

@@ -1,13 +1,31 @@
 'use client'
+import { useMemo } from 'react'
 import { useStore } from '@/store'
 import { fmtGBP, fmtDate, priorityBadge, statusBadge } from '@/lib/utils'
 import Link from 'next/link'
 
 export default function DashboardPage() {
-  const { stats, orders, inventory, sellers } = useStore()
+  const { stats, orders, inventory, sellers, invoices } = useStore()
 
   const pendingOrders  = orders.filter(o => o.status === 'pending' || o.status === 'processing').slice(0, 5)
   const lowStockItems  = inventory.filter(i => (i.good_stock - i.reserved) <= 5).slice(0, 5)
+
+  // Top sellers sorted by order count — live from state
+  const topSellers = useMemo(() =>
+    [...sellers].map(s => ({
+      seller:     s,
+      orderCount: orders.filter(o => o.seller_id === s.id).length,
+      revenue:    invoices.filter(i => i.seller_id === s.id).reduce((sum, i) => sum + i.total_amount, 0),
+    })).sort((a, b) => b.orderCount - a.orderCount).slice(0, 5)
+  , [sellers, orders, invoices])
+
+  // Warehouse capacity derived from real data (assume 120 units per pallet)
+  const totalPallets  = 4200
+  const usedPallets   = Math.min(Math.ceil(inventory.reduce((s, i) => s + i.total_in, 0) / 120), totalPallets)
+  const reservedPallets = Math.min(Math.ceil(inventory.reduce((s, i) => s + i.reserved, 0) / 120), usedPallets)
+  const occupiedPct   = Math.round((usedPallets / totalPallets) * 100)
+  const reservedPct   = Math.round((reservedPallets / totalPallets) * 100)
+  const availablePct  = Math.max(0, 100 - occupiedPct)
 
   const now = new Date()
   const dateLabel = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
@@ -143,19 +161,21 @@ export default function DashboardPage() {
 
       {/* Bottom row */}
       <div className="grid grid-cols-3 gap-3.5">
-        {/* Top sellers */}
+        {/* Top sellers — sorted by order count live from state */}
         <div className="kh-card">
-          <div className="text-sm font-bold text-[#0E2040] mb-4">🏆 Top Sellers</div>
+          <div className="text-sm font-bold text-[#0E2040] mb-4">🏆 Top Sellers by Orders</div>
           <div className="text-sm">
-            {sellers.slice(0, 5).map((s, i) => {
-              const sellerOrders = orders.filter(o => o.seller_id === s.id).length
-              return (
-                <div key={s.id} className="flex justify-between py-1.5 border-b border-[#E8ECF2] last:border-0">
-                  <span className="text-[#4A5A70]">{s.icon} {s.name}</span>
-                  <strong className="text-[#9E7410]">{sellerOrders}</strong>
+            {topSellers.length === 0 ? (
+              <p className="text-[#7A8BA0] text-xs py-4 text-center">No sellers yet</p>
+            ) : topSellers.map(({ seller, orderCount, revenue }) => (
+              <div key={seller.id} className="flex justify-between items-center py-1.5 border-b border-[#E8ECF2] last:border-0">
+                <span className="text-[#4A5A70]">{seller.icon} {seller.name}</span>
+                <div className="text-right">
+                  <div className="font-bold text-[#9E7410]">{orderCount} orders</div>
+                  <div className="text-[10px] text-[#7A8BA0]">{fmtGBP(revenue)}</div>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -177,13 +197,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Warehouse capacity */}
+        {/* Warehouse capacity — derived from live inventory */}
         <div className="kh-card">
           <div className="text-sm font-bold text-[#0E2040] mb-4">🏭 Warehouse Capacity</div>
           {[
-            { label: 'Occupied', pct: 73, color: '#C8971A' },
-            { label: 'Reserved', pct: 15, color: '#2A4F8A' },
-            { label: 'Available', pct: 12, color: '#1A7A48' },
+            { label: 'Occupied',  pct: occupiedPct,  color: '#C8971A' },
+            { label: 'Reserved',  pct: reservedPct,  color: '#2A4F8A' },
+            { label: 'Available', pct: availablePct, color: '#1A7A48' },
           ].map(b => (
             <div key={b.label} className="mb-2.5">
               <div className="flex justify-between text-xs text-[#7A8BA0] mb-1">
@@ -191,12 +211,12 @@ export default function DashboardPage() {
                 <strong className="text-[#0E2040]">{b.pct}%</strong>
               </div>
               <div className="pb">
-                <div className="pf" style={{ width: `${b.pct}%`, background: b.color }} />
+                <div className="pf" style={{ width: `${Math.max(b.pct, 0)}%`, background: b.color }} />
               </div>
             </div>
           ))}
           <div className="mt-3 text-[11px] text-[#7A8BA0] border-t border-[#E8ECF2] pt-2.5">
-            Total: 4,200 pallet spaces · Zones A–F
+            {usedPallets.toLocaleString()} of {totalPallets.toLocaleString()} pallet spaces · Zones A–F
           </div>
         </div>
       </div>

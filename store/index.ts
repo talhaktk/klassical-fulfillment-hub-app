@@ -388,13 +388,16 @@ export const useStore = create<AppState>((set, get) => ({
 
   // ── Mark invoice fully paid ───────────────────────────────
   markInvoicePaid: async (invoiceId, amount, accountId) => {
+    const inv = get().invoices.find(i => i.id === invoiceId)
+    const invNum = inv?.invoice_number ?? 'invoice'
     await get().recordTransaction({
       account_id: accountId,
       type: 'in',
       category: 'Seller Payment',
-      description: `Invoice payment`,
+      description: `Payment for ${invNum}`,
       amount,
       invoice_id: invoiceId,
+      seller_id: inv?.seller_id,
     })
   },
 
