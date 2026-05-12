@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#0A1628"/>
+  <polygon points="256,28 456,116 456,296 256,392 56,296 56,116" fill="#C8971A"/>
+  <polygon points="256,58 426,136 426,284 256,362 86,284 86,136" fill="#142D56"/>
+  <text x="108" y="310" font-size="182" font-weight="900" fill="#C8971A" font-family="Georgia,serif" letter-spacing="-6">KH</text>
+</svg>

@@ -11,7 +11,7 @@ const warehouseNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'Operations',
     items: [
-      { label: 'Dashboard',        href: '/',               icon: '📊' },
+      { label: 'Dashboard',        href: '/dashboard',      icon: '📊' },
       { label: 'Orders',           href: '/orders',         icon: '📦' },
       { label: 'Scan & Fulfill',   href: '/fulfill',        icon: '⚡', locked: true },
       { label: 'Inventory',        href: '/inventory',      icon: '🗄️' },

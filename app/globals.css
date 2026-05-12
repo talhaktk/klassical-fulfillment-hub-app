@@ -10,8 +10,6 @@ body {
   font-family: 'DM Sans', sans-serif;
   background: #F4F6FA;
   color: #0E2040;
-  height: 100vh;
-  overflow: hidden;
 }
 
 ::-webkit-scrollbar { width: 5px; }

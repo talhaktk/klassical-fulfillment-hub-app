@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline — Klassical Fulfillment HUB</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',system-ui,sans-serif;background:#0A1628;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:rgba(255,255,255,.05);border:1px solid rgba(200,151,26,.3);border-radius:20px;padding:48px 40px;text-align:center;max-width:400px;width:100%}
+    .badge{width:72px;height:72px;background:linear-gradient(135deg,#C8971A,#E8B830);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;font-weight:900;color:#0A1628;font-family:Georgia,serif;letter-spacing:-2px}
+    h1{font-size:22px;font-weight:700;margin-bottom:8px}
+    p{color:#7A8BA0;font-size:14px;line-height:1.6;margin-bottom:28px}
+    .info{background:rgba(200,151,26,.1);border:1px solid rgba(200,151,26,.25);border-radius:12px;padding:16px;font-size:13px;color:#D4A520;margin-bottom:28px;text-align:left}
+    .info li{list-style:none;padding:4px 0}
+    .info li::before{content:"✓ ";color:#C8971A}
+    button{background:linear-gradient(135deg,#9E7410,#D4A520);color:#0E2040;border:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;width:100%;transition:opacity .2s}
+    button:hover{opacity:.9}
+    .status{margin-top:20px;font-size:12px;color:#4A5A70}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">KH</div>
+    <h1>You're Offline</h1>
+    <p>No internet connection detected. The app will automatically reconnect and sync all changes when you're back online.</p>
+    <div class="info">
+      <ul>
+        <li>Cached pages remain accessible</li>
+        <li>Changes are queued for sync</li>
+        <li>Data updates automatically on reconnect</li>
+      </ul>
+    </div>
+    <button onclick="location.reload()">Try Again</button>
+    <p class="status" id="st">Waiting for connection…</p>
+  </div>
+  <script>
+    window.addEventListener('online', () => {
+      document.getElementById('st').textContent = 'Connection restored — reloading…'
+      setTimeout(() => location.href = '/dashboard', 1200)
+    })
+    setInterval(() => {
+      fetch('/api/health', {cache:'no-store'}).then(() => {
+        document.getElementById('st').textContent = 'Connected — redirecting…'
+        setTimeout(() => location.href = '/dashboard', 800)
+      }).catch(() => {})
+    }, 5000)
+  </script>
+</body>
+</html>

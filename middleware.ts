@@ -4,8 +4,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Always allow auth routes and API routes through
-  if (pathname.startsWith('/auth') || pathname.startsWith('/api')) {
+  // Public routes — no auth needed
+  if (
+    pathname === '/' ||
+    pathname === '/offline' ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api')
+  ) {
     return NextResponse.next()
   }
 
@@ -16,9 +21,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
+        get(name: string) { return request.cookies.get(name)?.value },
         set(name: string, value: string, options: CookieOptions) {
           request.cookies.set({ name, value, ...options })
           response = NextResponse.next({ request: { headers: request.headers } })
@@ -43,5 +46,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons|sw.js|manifest.json|offline.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
