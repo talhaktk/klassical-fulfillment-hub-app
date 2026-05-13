@@ -79,6 +79,20 @@ export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'b
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
+  async function handleClick() {
+    if (prompt) {
+      // Chrome/Edge desktop & Android: fire native install dialog directly
+      await prompt.prompt()
+      const { outcome } = await prompt.userChoice
+      if (outcome === 'accepted') setInstalled(true)
+      setPrompt(null)
+    } else {
+      // iOS / Firefox / no prompt: show device guide modal
+      setOpen(true)
+      setSelected(null)
+    }
+  }
+
   async function handleDeviceSelect(deviceId: string) {
     setSelected(deviceId)
     const device = DEVICES.find(d => d.id === deviceId)
@@ -132,7 +146,7 @@ export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'b
   return (
     <>
       <button
-        onClick={() => { setOpen(true); setSelected(null) }}
+        onClick={handleClick}
         className="inline-flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold border transition-all"
         style={{ color: '#4A5A70', borderColor: '#D0D8E8', background: '#fff', cursor: 'pointer' }}
       >
