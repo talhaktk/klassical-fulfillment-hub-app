@@ -6,8 +6,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-function detectPlatform(): 'ios' | 'android' | 'mac' | 'windows' | 'other' {
-  if (typeof navigator === 'undefined') return 'other'
+function getPlatform() {
   const ua = navigator.userAgent
   if (/iPad|iPhone|iPod/.test(ua)) return 'ios'
   if (/Android/.test(ua)) return 'android'
@@ -16,141 +15,189 @@ function detectPlatform(): 'ios' | 'android' | 'mac' | 'windows' | 'other' {
   return 'other'
 }
 
-const IOS_STEPS = [
-  { icon: '1️⃣', text: 'Tap the Share button at the bottom of Safari' },
-  { icon: '2️⃣', text: 'Scroll down and tap "Add to Home Screen"' },
-  { icon: '3️⃣', text: 'Tap "Add" — Klassical Prep appears on your home screen' },
-]
+const STEPS: Record<string, { icon: string; label: string; instructions: string[] }> = {
+  ios: {
+    icon: '🍎',
+    label: 'iPhone / iPad',
+    instructions: [
+      'Tap the Share button (□↑) at the bottom of Safari',
+      'Scroll down and tap "Add to Home Screen"',
+      'Tap "Add" — Klassical Prep is on your home screen',
+    ],
+  },
+  android: {
+    icon: '🤖',
+    label: 'Android',
+    instructions: [
+      'Tap "Install App" below — Chrome will ask to install',
+      'Tap "Install" in the Chrome popup',
+      'Klassical Prep appears on your home screen',
+    ],
+  },
+  mac: {
+    icon: '💻',
+    label: 'MacBook',
+    instructions: [
+      'Tap "Install App" below — Chrome/Edge will install it',
+      'Or click the ⊕ icon in the address bar',
+      'Klassical Prep opens as its own app window',
+    ],
+  },
+  windows: {
+    icon: '🪟',
+    label: 'Windows',
+    instructions: [
+      'Tap "Install App" below — Chrome/Edge will install it',
+      'Or click the ⊕ icon in the address bar',
+      'Klassical Prep is added to your desktop',
+    ],
+  },
+  other: {
+    icon: '💻',
+    label: 'Desktop',
+    instructions: [
+      'Open this site in Chrome or Edge',
+      'Click the ⊕ install icon in the address bar',
+      'Click Install — Klassical Prep opens as its own app',
+    ],
+  },
+}
 
 export default function PWABanner() {
-  const [prompt,   setPrompt]   = useState<BeforeInstallPromptEvent | null>(null)
-  const [visible,  setVisible]  = useState(false)
-  const [platform, setPlatform] = useState<ReturnType<typeof detectPlatform>>('other')
-  const [done,     setDone]     = useState(false)
-  const [iosStep,  setIosStep]  = useState(false)
+  const [visible,      setVisible]      = useState(false)
+  const [platform,     setPlatform]     = useState('other')
+  const [prompt,       setPrompt]       = useState<BeforeInstallPromptEvent | null>(null)
+  const [showSteps,    setShowSteps]    = useState(false)
+  const [installed,    setInstalled]    = useState(false)
 
   useEffect(() => {
-    // Already running as installed PWA — hide everything
+    // Already a PWA — never show
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as unknown as { standalone?: boolean }).standalone === true
+      (navigator as { standalone?: boolean }).standalone === true
     if (standalone) return
 
-    const p = detectPlatform()
+    // User dismissed recently (within 3 days) — don't pester
+    const dismissed = localStorage.getItem('pwa-banner-dismissed')
+    if (dismissed && Date.now() - Number(dismissed) < 3 * 24 * 60 * 60 * 1000) return
+
+    const p = getPlatform()
     setPlatform(p)
 
-    if (p === 'ios') {
-      // iOS Safari: auto-show our instruction banner after 2 s
-      const t = setTimeout(() => setVisible(true), 2000)
-      return () => clearTimeout(t)
-    }
-
-    // Chrome / Edge on Android, Mac, Windows
+    // Capture native install prompt if Chrome fires it
     const handler = (e: Event) => {
       e.preventDefault()
       setPrompt(e as BeforeInstallPromptEvent)
-      setVisible(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
-    window.addEventListener('appinstalled', () => { setDone(true); setVisible(false) })
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', () => { setInstalled(true); setVisible(false) })
+
+    // Always show after 3 seconds — regardless of whether prompt fired
+    const t = setTimeout(() => setVisible(true), 3000)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      clearTimeout(t)
+    }
   }, [])
 
-  async function handleInstall() {
-    if (platform === 'ios') {
-      setIosStep(true)
-      return
-    }
-    if (!prompt) return
-    await prompt.prompt()
-    const { outcome } = await prompt.userChoice
-    if (outcome === 'accepted') setDone(true)
-    setPrompt(null)
+  function dismiss() {
+    localStorage.setItem('pwa-banner-dismissed', String(Date.now()))
     setVisible(false)
   }
 
-  if (!visible || done) return null
+  async function handleInstall() {
+    if (prompt) {
+      // Chrome/Edge — fire native install directly
+      await prompt.prompt()
+      const { outcome } = await prompt.userChoice
+      if (outcome === 'accepted') { setInstalled(true); setVisible(false) }
+      setPrompt(null)
+    } else {
+      // No native prompt (iOS, Firefox, already dismissed) — show steps
+      setShowSteps(true)
+    }
+  }
+
+  if (!visible || installed) return null
+
+  const info = STEPS[platform] || STEPS.other
 
   return (
     <div
-      className="fixed bottom-6 right-5 z-[9999] w-72 rounded-2xl shadow-2xl overflow-hidden"
+      className="fixed bottom-6 right-5 z-[9999] w-[280px] rounded-2xl overflow-hidden"
       style={{
         background: '#0E1F3D',
-        border: '1px solid rgba(200,151,26,.35)',
-        boxShadow: '0 20px 60px rgba(10,22,40,.6)',
-        animation: 'slideUp .35s ease',
+        border: '1px solid rgba(200,151,26,.4)',
+        boxShadow: '0 20px 64px rgba(10,22,40,.65)',
+        animation: 'kfSlideUp .4s cubic-bezier(.16,1,.3,1)',
       }}
     >
-      <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <style>{`
+        @keyframes kfSlideUp {
+          from { opacity: 0; transform: translateY(32px) scale(.96); }
+          to   { opacity: 1; transform: translateY(0)    scale(1);   }
+        }
+      `}</style>
 
-      {/* close */}
       <button
-        onClick={() => setVisible(false)}
-        className="absolute top-3 right-3 text-sm leading-none"
-        style={{ color: 'rgba(255,255,255,.4)' }}
+        onClick={dismiss}
+        className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-full text-xs"
+        style={{ background: 'rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)' }}
       >✕</button>
 
       <div className="p-5">
-        {/* logo + title */}
+        {/* Logo + title */}
         <div className="flex items-center gap-3 mb-4">
           <div
             className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center font-black text-xl"
-            style={{ background: 'linear-gradient(135deg,#C8971A,#E8B830)', color: '#0A1628', fontFamily: 'Georgia,serif', boxShadow: '0 4px 16px rgba(200,151,26,.4)' }}
+            style={{ background: 'linear-gradient(135deg,#C8971A,#E8B830)', color: '#0A1628', fontFamily: 'Georgia,serif', letterSpacing: -1, boxShadow: '0 4px 20px rgba(200,151,26,.45)' }}
           >
             KH
           </div>
           <div>
-            <div className="font-black text-base text-white leading-tight">Install Klassical Prep</div>
-            <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,.5)' }}>
-              Add to home screen for a faster, native-like experience
+            <div className="font-black text-[15px] text-white leading-tight">Install Klassical Prep</div>
+            <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,.45)' }}>
+              {info.icon} {info.label} · Native app experience
             </div>
           </div>
         </div>
 
-        {/* iOS step-by-step (shown after tapping Install on iOS) */}
-        {iosStep ? (
-          <div className="mb-3 rounded-xl p-3.5" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(200,151,26,.2)' }}>
-            {IOS_STEPS.map((s, i) => (
+        {/* Steps — shown after tap on iOS or when no native prompt */}
+        {showSteps && (
+          <div className="mb-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(200,151,26,.2)' }}>
+            {info.instructions.map((step, i) => (
               <div key={i} className="flex items-start gap-2 mb-2 last:mb-0">
-                <span className="text-base leading-none mt-0.5">{s.icon}</span>
-                <span className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,.75)' }}>{s.text}</span>
+                <span
+                  className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold mt-0.5"
+                  style={{ background: '#C8971A', color: '#0A1628' }}
+                >
+                  {i + 1}
+                </span>
+                <span className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,.75)' }}>{step}</span>
               </div>
             ))}
-            {/* Arrow pointing to Safari share button */}
-            <div className="mt-3 flex items-center gap-1.5 text-xs font-bold" style={{ color: '#D4A520' }}>
-              <span>↓</span> Tap the Share icon below ↓
-            </div>
           </div>
-        ) : (
-          <>
-            {/* platform badge */}
-            <div className="mb-3 text-[10px] uppercase tracking-widest font-bold" style={{ color: 'rgba(200,151,26,.7)' }}>
-              {platform === 'ios'     && '🍎 iPhone / iPad — Safari'}
-              {platform === 'android' && '🤖 Android — Chrome'}
-              {platform === 'mac'     && '💻 MacBook — Chrome / Edge'}
-              {platform === 'windows' && '🪟 Windows — Chrome / Edge'}
-            </div>
-          </>
         )}
 
         {/* Install button */}
         <button
           onClick={handleInstall}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold mb-2 transition-all active:scale-95"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold mb-2 active:scale-95 transition-transform"
           style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#0A1628' }}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          {iosStep ? 'Follow steps above ↑' : 'Install App'}
+          {showSteps ? (platform === 'ios' ? 'Tap Share ↑ then Add to Home' : 'Follow steps above') : 'Install App'}
         </button>
 
         <button
-          onClick={() => setVisible(false)}
-          className="w-full py-2.5 rounded-xl text-sm font-medium"
-          style={{ background: 'rgba(255,255,255,.07)', color: 'rgba(255,255,255,.5)' }}
+          onClick={dismiss}
+          className="w-full py-2 rounded-xl text-xs"
+          style={{ color: 'rgba(255,255,255,.35)' }}
         >
           Not now
         </button>
