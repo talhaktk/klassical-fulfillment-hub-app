@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import PWABanner from '@/components/site/PWABanner'
+import { Toaster } from 'react-hot-toast'
 
 export const metadata: Metadata = {
   title: {
@@ -40,6 +42,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
+        <PWABanner />
+        <Toaster position="bottom-center" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
