@@ -7,7 +7,7 @@ const NAV = [
   { label: 'Services',        href: '#services' },
   { label: 'Platforms',       href: '#partners' },
   { label: 'Digital Hub',     href: '#digital-hub' },
-  { label: 'Partner Program', href: '#partner-program' },
+  { label: 'Partner Program', href: '/partner-program' },
   { label: 'Pricing',         href: '#pricing'  },
   { label: 'Contact',         href: '#contact'  },
 ]

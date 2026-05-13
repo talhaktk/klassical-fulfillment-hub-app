@@ -12,6 +12,7 @@ const SERVICES = [
       'Real-time stock visibility & cycle counts',
     ],
     accent: '#C8971A',
+    href: '/services/warehouse-storage',
   },
   {
     num: '02',
@@ -24,6 +25,7 @@ const SERVICES = [
       'Custom inserts, thank-you notes & branded tissue',
     ],
     accent: '#C8971A',
+    href: '/services/prep-fulfillment',
   },
   {
     num: '03',
@@ -36,6 +38,7 @@ const SERVICES = [
       'Physical pre-shipment inspection team in China',
     ],
     accent: '#C8971A',
+    href: '/services/sourcing-inspection',
   },
   {
     num: '04',
@@ -48,6 +51,7 @@ const SERVICES = [
       'Smart courier selection by cost, speed & SLA',
     ],
     accent: '#C8971A',
+    href: '/services/ai-automation',
   },
 ]
 
@@ -124,7 +128,7 @@ export default function Services() {
               </ul>
 
               <a
-                href="#contact"
+                href={s.href}
                 className="text-sm font-semibold flex items-center gap-1 transition-all group-hover:gap-2"
                 style={{ color: '#C8971A' }}
               >

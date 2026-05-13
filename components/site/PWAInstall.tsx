@@ -88,7 +88,7 @@ export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'b
         }}
       >
         <span className="text-base">📲</span>
-        {prompt ? 'Install App' : 'How to Install'}
+        {prompt ? 'Download App' : 'Download App'}
       </button>
 
       {/* Instruction tooltip (shown when no native prompt) */}
