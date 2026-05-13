@@ -39,14 +39,9 @@ export default function WarehouseStoragePage() {
           <p className="text-xl max-w-2xl leading-relaxed mb-8" style={{ color: '#5A6A80' }}>
             Secure UK warehousing built for ecommerce velocity. Pallet, shelf and bin storage with 24/7 CCTV and real-time stock visibility — all from our Luton facility.
           </p>
-          <div className="flex flex-wrap gap-3">
-            <a href="#contact-cta" className="px-7 py-3.5 rounded-xl text-sm font-bold" style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#fff', boxShadow: '0 8px 24px rgba(200,151,26,.3)' }}>
-              Start Storing with Us →
-            </a>
-            <Link href="/#pricing" className="px-7 py-3.5 rounded-xl text-sm font-semibold border" style={{ color: '#4A5A70', borderColor: '#D0D8E8', background: '#fff' }}>
-              View Pricing
-            </Link>
-          </div>
+          <a href="#contact-cta" className="inline-block px-7 py-3.5 rounded-xl text-sm font-bold" style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#fff', boxShadow: '0 8px 24px rgba(200,151,26,.3)' }}>
+            Start Storing with Us →
+          </a>
         </div>
       </section>
 
@@ -68,32 +63,6 @@ export default function WarehouseStoragePage() {
                 <p className="text-sm leading-relaxed" style={{ color: '#7A8BA0' }}>{f.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing callout */}
-      <section style={{ background: '#F4F6FA', borderTop: '1px solid #E8ECF2' }}>
-        <div className="max-w-3xl mx-auto px-5 py-16 text-center">
-          <h2 className="text-3xl font-black mb-4" style={{ fontFamily: 'Playfair Display, serif', color: '#0A1628' }}>Storage Pricing</h2>
-          <p className="text-base mb-8" style={{ color: '#7A8BA0' }}>Storage is billed weekly per pallet at market rates. Receiving & handling charged per box by weight.</p>
-          <div className="rounded-2xl overflow-hidden mb-8" style={{ border: '1px solid #E8ECF2' }}>
-            {[
-              { label: 'Receiving & Forwarding', rate: '£3.40 per box' },
-              { label: 'Box under 12 kg',        rate: '£3.40 per box' },
-              { label: 'Box 12–25 kg',            rate: '£4.40 per box' },
-              { label: 'Box over 25 kg',          rate: '£5.40 per box' },
-              { label: 'Pallet in / out',         rate: '£12.00 per pallet' },
-              { label: 'Weekly storage',          rate: 'from £8 / pallet' },
-            ].map((r, i) => (
-              <div key={i} className="flex justify-between px-6 py-3.5" style={{ background: i % 2 === 0 ? '#fff' : '#FAFBFD', borderBottom: i < 5 ? '1px solid #F0F4FA' : 'none' }}>
-                <span className="text-sm" style={{ color: '#4A5A70' }}>{r.label}</span>
-                <span className="text-sm font-semibold" style={{ color: '#C8971A' }}>{r.rate}</span>
-              </div>
-            ))}
-          </div>
-          <div className="inline-flex items-center gap-2 text-sm" style={{ color: '#7A8BA0' }}>
-            🎉 <span><strong style={{ color: '#C8971A' }}>New sellers get 2 months free storage.</strong> Ask us when you apply.</span>
           </div>
         </div>
       </section>
