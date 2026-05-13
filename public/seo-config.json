@@ -1,36 +1,36 @@
 {
-  "lastUpdated": "2026-05-13T17:34:09.536Z",
+  "lastUpdated": "2026-05-13T17:34:11.225Z",
   "generatedBy": "SEO-Auto-Optimizer-v2.0",
   "primaryKeyword": "Amazon fba, Amazon uk, 3pl, 3pl fba, 3pl tiktok,3pl products ,3pl warehouse \n",
   "websiteType": "warehouse",
-  "title": "Klassical 3PL: Amazon FBA & 3PL Warehouse UK",
-  "metaDescription": "Reliable 3PL solutions for Amazon FBA in the UK. Enhance your supply chain with Klassical Logistics. Contact us today!",
+  "title": "Reliable 3PL Warehouse for Amazon FBA UK",
+  "metaDescription": "Boost your supply chain with Klassical 3PL. Reliable Amazon FBA & e-commerce fulfillment. Contact us today!",
   "h1": "Klassical Logistics & Fulfillment UK",
   "keywords": [
-    "Amazon fba",
-    "Amazon uk",
-    "3pl",
-    "3pl fba",
-    "3pl tiktok",
-    "3pl products",
-    "3pl warehouse",
     "fulfillment",
+    "electronic sell through",
     "e commerce",
-    "dropship"
+    "e-commerce",
+    "ecommerce",
+    "what is e commerce",
+    "what is ecommerce",
+    "drop & ship",
+    "dropship",
+    "dropshippers"
   ],
-  "focusKeyphrase": "Amazon FBA 3PL UK",
+  "focusKeyphrase": "Amazon fba",
   "schemaType": "LocalBusiness",
   "openGraph": {
-    "title": "Klassical 3PL: Your Trusted Amazon FBA Partner",
-    "description": "Discover reliable 3PL solutions for Amazon FBA in the UK with Klassical Logistics. Enhance your supply chain today!"
+    "title": "Klassical Logistics: Your Trusted 3PL Partner",
+    "description": "Enhance your supply chain with Klassical 3PL's reliable Amazon FBA and e-commerce solutions. Discover our capacity and reliability."
   },
   "backlinkStrategy": {
     "prioritySites": [
       "logisticsnews.com",
-      "supplychaininsights.com",
-      "warehousenetwork.com"
+      "supplychaindive.com",
+      "warehousenews.co.uk"
     ],
-    "outreachTemplate": "Hi [Name], I came across your site and believe our 3PL services could be a great fit for your audience. Let's connect!",
+    "outreachTemplate": "Hi [Name], I found your article on [topic] insightful. We offer unique 3PL solutions and would love to collaborate.",
     "anchorTextPlan": [
       {
         "type": "exact_match",
@@ -44,28 +44,28 @@
       },
       {
         "type": "partial_match",
-        "text": "UK 3PL solutions",
+        "text": "3PL solutions",
         "targetPercent": 25
       },
       {
         "type": "generic",
-        "text": "Learn more",
+        "text": "learn more",
         "targetPercent": 15
       },
       {
         "type": "naked_url",
-        "text": "https://www.kllassical3pl.com",
+        "text": "https://www.klassical3pl.com",
         "targetPercent": 10
       }
     ],
     "quickWins": [
-      "Guest posts on logistics blogs",
-      "Collaborations with supply chain influencers",
-      "Press releases on new services"
+      "Guest posts on supply chain blogs",
+      "Collaborations with e-commerce influencers",
+      "Sponsorship of logistics webinars"
     ],
     "contentIdeas": [
       "Ultimate Guide to Amazon FBA",
-      "Case Study: Successful 3PL Integration"
+      "Case Study: Improving Supply Chain Efficiency"
     ]
   },
   "backlinkIntelligence": {
