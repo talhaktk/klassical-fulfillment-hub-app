@@ -2,10 +2,10 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Klassical Fulfillment HUB',
-    short_name: 'KF Hub',
+    name: 'Klassical Prep',
+    short_name: 'Klassical Prep',
     description: 'Professional 3PL warehouse management — Klassical Holdings Ltd, Luton UK',
-    start_url: '/dashboard',
+    start_url: '/auth/login',
     display: 'standalone',
     orientation: 'portrait-primary',
     background_color: '#0A1628',

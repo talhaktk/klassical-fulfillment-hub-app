@@ -9,11 +9,12 @@ export default function LoginPage() {
   const supabase = createClient()
   const router   = useRouter()
 
-  const [tab,      setTab]      = useState<LoginTab>('staff')
-  const [email,    setEmail]    = useState('')
-  const [password, setPassword] = useState('')
-  const [error,    setError]    = useState('')
-  const [loading,  setLoading]  = useState(false)
+  const [tab,       setTab]       = useState<LoginTab>('staff')
+  const [email,     setEmail]     = useState('')
+  const [password,  setPassword]  = useState('')
+  const [remember,  setRemember]  = useState(true)
+  const [error,     setError]     = useState('')
+  const [loading,   setLoading]   = useState(false)
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -130,6 +131,21 @@ export default function LoginPage() {
                 }}
               />
             </div>
+
+            {/* Keep me signed in */}
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div
+                className="relative w-10 h-5 rounded-full transition-colors flex-shrink-0"
+                style={{ background: remember ? 'linear-gradient(135deg,#9E7410,#D4A520)' : 'rgba(255,255,255,.15)' }}
+                onClick={() => setRemember(v => !v)}
+              >
+                <span
+                  className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
+                  style={{ background: '#fff', left: remember ? '22px' : '2px', boxShadow: '0 1px 4px rgba(0,0,0,.3)' }}
+                />
+              </div>
+              <span className="text-xs" style={{ color: '#B8C4D4' }}>Keep me signed in</span>
+            </label>
 
             {error && (
               <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(192,50,30,.15)', border: '1px solid rgba(192,50,30,.4)', color: '#FF7A6B' }}>

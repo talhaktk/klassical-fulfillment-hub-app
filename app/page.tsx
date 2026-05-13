@@ -12,6 +12,7 @@ import AppDownload     from '@/components/site/AppDownload'
 import Contact         from '@/components/site/Contact'
 import Footer          from '@/components/site/Footer'
 import WhatsAppFloat   from '@/components/site/WhatsAppFloat'
+import PWARedirect     from '@/components/site/PWARedirect'
 
 export const metadata: Metadata = {
   title: 'Klassical Logistics & Fulfillment UK | Smart Storage. Seamless Delivery.',
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#fff', overflowX: 'hidden' }}>
+      <PWARedirect />
       <AnnouncementBar />
       <Navbar />
       <main>
