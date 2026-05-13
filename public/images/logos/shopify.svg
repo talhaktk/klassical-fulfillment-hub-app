@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 72" width="140" height="46">
+  <!-- Shopping bag icon -->
+  <g transform="translate(0, 4)">
+    <!-- Bag body -->
+    <path d="M28 18 L6 24 L2 62 L50 62 L46 24 Z" fill="#96BF48"/>
+    <!-- Bag handle left -->
+    <path d="M16 18 Q16 6 26 6 Q36 6 36 18" stroke="#5E8E3E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <!-- White S -->
+    <text x="15" y="48" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="26" fill="white">S</text>
+  </g>
+  <!-- shopify text -->
+  <text x="58" y="50" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="30" fill="#3E3E3E" letter-spacing="-0.5">shopify</text>
+</svg>

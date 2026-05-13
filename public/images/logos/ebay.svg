@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 90" width="130" height="45">
+  <!-- eBay multicolor letters -->
+  <!-- e - red -->
+  <text x="0" y="68" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="72" fill="#E53238">e</text>
+  <!-- b - blue -->
+  <text x="48" y="60" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="72" fill="#0064D3">b</text>
+  <!-- a - yellow/orange -->
+  <text x="97" y="68" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="72" fill="#F5AF02">a</text>
+  <!-- y - green -->
+  <text x="145" y="68" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="72" fill="#86B817">y</text>
+</svg>

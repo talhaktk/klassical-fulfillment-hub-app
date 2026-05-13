@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 72" width="110" height="50">
+  <!-- Black background for TikTok icon -->
+  <rect width="52" height="52" x="0" y="10" rx="10" fill="#010101"/>
+  <!-- TikTok note - cyan shadow -->
+  <path d="M36 18 L36 36 A8 8 0 1 1 28 28" stroke="#69C9D0" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M36 18 Q42 14 46 20" stroke="#69C9D0" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <!-- TikTok note - red shadow offset -->
+  <path d="M34 20 L34 38 A8 8 0 1 1 26 30" stroke="#EE1D52" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M34 20 Q40 16 44 22" stroke="#EE1D52" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <!-- TikTok note - white main -->
+  <path d="M35 19 L35 37 A8 8 0 1 1 27 29" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M35 19 Q41 15 45 21" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- TikTok text -->
+  <text x="58" y="45" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="26" fill="#010101">TikTok</text>
+</svg>

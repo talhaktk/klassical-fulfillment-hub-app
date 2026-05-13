@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" width="200" height="45">
+  <!-- Purple speech bubble -->
+  <rect x="0" y="4" width="70" height="50" rx="10" fill="#7F54B3"/>
+  <!-- Speech bubble tail -->
+  <path d="M12 54 L6 66 L26 54 Z" fill="#7F54B3"/>
+  <!-- Woo text in white -->
+  <text x="6" y="38" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="900" font-size="26" fill="white">Woo</text>
+  <!-- COMMERCE text in black -->
+  <text x="76" y="40" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="28" fill="#1a1a1a" letter-spacing="-0.5">COMMERCE</text>
+</svg>

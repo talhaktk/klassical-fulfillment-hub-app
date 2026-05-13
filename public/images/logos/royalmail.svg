@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60" width="140" height="38">
+  <!-- Red envelope icon -->
+  <rect x="0" y="8" width="46" height="32" rx="3" fill="#E22222"/>
+  <path d="M0 8 L23 26 L46 8" stroke="white" stroke-width="2.5" fill="none"/>
+  <path d="M0 40 L16 24" stroke="white" stroke-width="1.5" fill="none"/>
+  <path d="M46 40 L30 24" stroke="white" stroke-width="1.5" fill="none"/>
+  <!-- Royal Mail text -->
+  <text x="52" y="30" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#E22222">Royal Mail</text>
+</svg>

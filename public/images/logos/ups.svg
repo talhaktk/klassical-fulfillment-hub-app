@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 60" width="90" height="42">
+  <!-- UPS shield shape -->
+  <path d="M20 4 L60 4 L60 36 Q60 52 40 58 Q20 52 20 36 Z" fill="#5B3427"/>
+  <text x="27" y="40" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="22" fill="#FFB500">UPS</text>
+  <!-- UPS text label -->
+  <text x="68" y="38" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="26" fill="#5B3427">UPS</text>
+</svg>

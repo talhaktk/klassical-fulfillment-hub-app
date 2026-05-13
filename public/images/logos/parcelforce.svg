@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="130" height="40">
+  <rect x="0" y="8" width="42" height="42" rx="6" fill="#E85100"/>
+  <text x="9" y="40" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="30" fill="white">P</text>
+  <text x="50" y="38" font-family="Arial, sans-serif" font-weight="700" font-size="18" fill="#E85100">Parcelforce</text>
+</svg>

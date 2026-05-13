@@ -1,42 +1,42 @@
+'use client'
+
 const PLATFORMS = [
-  { name: 'Shopify',       bg: '#96BF48', color: '#fff',    letter: 'S'  },
-  { name: 'Amazon',        bg: '#232F3E', color: '#FF9900', letter: 'a'  },
-  { name: 'TikTok Shop',   bg: '#010101', color: '#fff',    letter: 'tt' },
-  { name: 'WooCommerce',   bg: '#7F54B3', color: '#fff',    letter: 'W'  },
-  { name: 'eBay',          bg: '#fff',    color: '#E53238', letter: 'e'  },
-  { name: 'Etsy',          bg: '#F56400', color: '#fff',    letter: 'e'  },
+  { name: 'Shopify',       logo: '/images/logos/shopify.svg',      bg: '#f6f6f6',  h: 44 },
+  { name: 'Amazon',        logo: '/images/logos/amazon.svg',       bg: '#ffffff',  h: 36 },
+  { name: 'TikTok Shop',   logo: '/images/logos/tiktok.svg',       bg: '#f6f6f6',  h: 44 },
+  { name: 'WooCommerce',   logo: '/images/logos/woocommerce.svg',  bg: '#f6f6f6',  h: 38 },
+  { name: 'eBay',          logo: '/images/logos/ebay.svg',         bg: '#ffffff',  h: 44 },
 ]
 
 const CARRIERS = [
-  { name: 'Royal Mail',    bg: '#E22222', color: '#fff',    letter: 'RM' },
-  { name: 'DPD',           bg: '#DC0032', color: '#fff',    letter: 'DPD'},
-  { name: 'Evri',          bg: '#9B59B6', color: '#fff',    letter: 'ev' },
-  { name: 'Parcelforce',   bg: '#E85100', color: '#fff',    letter: 'P'  },
-  { name: 'UPS',           bg: '#5B3427', color: '#FFB500', letter: 'UPS'},
-  { name: 'FedEx',         bg: '#4D148C', color: '#FF6600', letter: 'FX' },
+  { name: 'Royal Mail',    logo: '/images/logos/royalmail.svg',    bg: '#fff0f0',  h: 36 },
+  { name: 'DPD',           logo: '/images/logos/dpd.svg',          bg: '#DC0032',  h: 42 },
+  { name: 'Evri',          logo: '/images/logos/evri.svg',         bg: '#9B59B6',  h: 42 },
+  { name: 'Parcelforce',   logo: '/images/logos/parcelforce.svg',  bg: '#fff5f0',  h: 36 },
+  { name: 'UPS',           logo: '/images/logos/ups.svg',          bg: '#f8f4f2',  h: 40 },
+  { name: 'FedEx',         logo: '/images/logos/fedex.svg',        bg: '#4D148C',  h: 42 },
 ]
 
-function BadgeRow({ items }: { items: typeof PLATFORMS }) {
+function LogoRow({ items }: { items: typeof PLATFORMS }) {
   return (
-    <div className="flex flex-wrap justify-center gap-3">
+    <div className="flex flex-wrap justify-center gap-4">
       {items.map(p => (
         <div
           key={p.name}
-          className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
+          className="flex items-center justify-center px-5 py-3 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md"
           style={{
             background: p.bg,
-            color: p.color,
-            border: p.bg === '#fff' ? '2px solid #E53238' : 'none',
-            boxShadow: '0 2px 8px rgba(0,0,0,.15)',
+            border: '1px solid rgba(0,0,0,.08)',
+            minWidth: 130,
+            height: 64,
+            boxShadow: '0 2px 8px rgba(0,0,0,.07)',
           }}
         >
-          <span
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0"
-            style={{ background: 'rgba(255,255,255,.2)', letterSpacing: -0.5, fontFamily: 'Arial, sans-serif' }}
-          >
-            {p.letter.toUpperCase().slice(0, 2)}
-          </span>
-          <span style={{ fontFamily: 'Arial, sans-serif', letterSpacing: '.2px' }}>{p.name}</span>
+          <img
+            src={p.logo}
+            alt={p.name}
+            style={{ height: p.h, maxWidth: 160, objectFit: 'contain' }}
+          />
         </div>
       ))}
     </div>
@@ -64,15 +64,15 @@ export default function Partners() {
         </p>
 
         <div className="mb-5">
-          <div className="text-[10px] uppercase tracking-[2px] font-bold mb-4" style={{ color: '#B8C4D4' }}>Sales Platforms</div>
-          <BadgeRow items={PLATFORMS} />
+          <div className="text-[10px] uppercase tracking-[2px] font-bold mb-5" style={{ color: '#B8C4D4' }}>Sales Platforms</div>
+          <LogoRow items={PLATFORMS} />
         </div>
 
-        <div className="w-full h-px my-7" style={{ background: '#E8ECF2' }} />
+        <div className="w-full h-px my-8" style={{ background: '#E8ECF2' }} />
 
         <div>
-          <div className="text-[10px] uppercase tracking-[2px] font-bold mb-4" style={{ color: '#B8C4D4' }}>Carriers &amp; Couriers</div>
-          <BadgeRow items={CARRIERS} />
+          <div className="text-[10px] uppercase tracking-[2px] font-bold mb-5" style={{ color: '#B8C4D4' }}>Carriers &amp; Couriers</div>
+          <LogoRow items={CARRIERS} />
         </div>
 
         <p className="text-xs mt-8" style={{ color: '#B8C4D4' }}>
