@@ -3,10 +3,13 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 const NAV = [
-  { label: 'Services', href: '#services' },
-  { label: 'Pricing',  href: '#pricing'  },
-  { label: 'Partners', href: '#partners' },
-  { label: 'Contact',  href: '#contact'  },
+  { label: 'About',           href: '#why'      },
+  { label: 'Services',        href: '#services' },
+  { label: 'Platforms',       href: '#partners' },
+  { label: 'Digital Hub',     href: '#digital-hub' },
+  { label: 'Partner Program', href: '#partner-program' },
+  { label: 'Pricing',         href: '#pricing'  },
+  { label: 'Contact',         href: '#contact'  },
 ]
 
 export default function Navbar() {
@@ -23,12 +26,13 @@ export default function Navbar() {
     <nav
       className="sticky top-0 z-50 transition-all duration-300"
       style={{
-        background: scrolled ? 'rgba(10,22,40,.97)' : 'rgba(10,22,40,.7)',
+        background: scrolled ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(12px)',
-        borderBottom: scrolled ? '1px solid rgba(200,151,26,.25)' : '1px solid transparent',
+        borderBottom: scrolled ? '1px solid #E8ECF2' : '1px solid transparent',
+        boxShadow: scrolled ? '0 2px 16px rgba(10,22,40,.08)' : 'none',
       }}
     >
-      <div className="max-w-6xl mx-auto px-5 flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-5 flex items-center justify-between h-16">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
           <div
@@ -38,7 +42,7 @@ export default function Navbar() {
             KH
           </div>
           <div>
-            <div className="text-white font-bold text-sm leading-tight" style={{ fontFamily: 'Playfair Display, serif' }}>
+            <div className="font-bold text-sm leading-tight" style={{ fontFamily: 'Playfair Display, serif', color: '#0A1628' }}>
               Klassical
             </div>
             <div className="text-[9px] uppercase tracking-[2px]" style={{ color: '#C8971A' }}>
@@ -48,15 +52,15 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-0.5">
           {NAV.map(n => (
             <a
               key={n.label}
               href={n.href}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ color: '#B8C4D4' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#B8C4D4')}
+              className="px-3 py-2 rounded-lg text-[13px] font-medium transition-colors"
+              style={{ color: '#4A5A70' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#0A1628')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#4A5A70')}
             >
               {n.label}
             </a>
@@ -64,18 +68,18 @@ export default function Navbar() {
         </div>
 
         {/* CTAs */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2">
           <Link
             href="/auth/login"
             className="px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5"
-            style={{ background: 'rgba(200,151,26,.15)', border: '1px solid rgba(200,151,26,.4)', color: '#D4A520' }}
+            style={{ background: '#F0F4FA', border: '1px solid #D0D8E8', color: '#2A4F8A' }}
           >
-            🔐 Login to Hub
+            🔐 Hub Login
           </Link>
           <a
             href="#contact"
             className="px-4 py-2 rounded-lg text-sm font-bold transition-all"
-            style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#0A1628' }}
+            style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#fff', boxShadow: '0 4px 12px rgba(200,151,26,.35)' }}
           >
             Get a Quote
           </a>
@@ -83,7 +87,7 @@ export default function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden flex flex-col gap-1.5 p-2"
+          className="lg:hidden flex flex-col gap-1.5 p-2"
           onClick={() => setOpen(v => !v)}
           aria-label="Menu"
         >
@@ -91,7 +95,7 @@ export default function Navbar() {
             <span
               key={i}
               className="block w-5 h-0.5 transition-all"
-              style={{ background: '#C8971A', transformOrigin: 'center' }}
+              style={{ background: '#0A1628' }}
             />
           ))}
         </button>
@@ -100,25 +104,25 @@ export default function Navbar() {
       {/* Mobile menu */}
       {open && (
         <div
-          className="md:hidden border-t px-5 py-4 flex flex-col gap-2"
-          style={{ background: '#0A1628', borderColor: 'rgba(200,151,26,.2)' }}
+          className="lg:hidden border-t px-5 py-4 flex flex-col gap-1"
+          style={{ background: '#fff', borderColor: '#E8ECF2' }}
         >
           {NAV.map(n => (
             <a
               key={n.label}
               href={n.href}
               className="py-2.5 text-sm font-medium border-b"
-              style={{ color: '#B8C4D4', borderColor: 'rgba(255,255,255,.06)' }}
+              style={{ color: '#4A5A70', borderColor: '#F0F4FA' }}
               onClick={() => setOpen(false)}
             >
               {n.label}
             </a>
           ))}
-          <div className="flex gap-2 mt-2">
-            <Link href="/auth/login" className="flex-1 text-center py-2.5 rounded-lg text-sm font-semibold border" style={{ color: '#B8C4D4', borderColor: 'rgba(184,196,212,.3)' }}>
-              Login
+          <div className="flex gap-2 mt-3">
+            <Link href="/auth/login" className="flex-1 text-center py-2.5 rounded-lg text-sm font-semibold border" style={{ color: '#2A4F8A', borderColor: '#D0D8E8', background: '#F0F4FA' }}>
+              Hub Login
             </Link>
-            <a href="#contact" className="flex-1 text-center py-2.5 rounded-lg text-sm font-bold" style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#0A1628' }} onClick={() => setOpen(false)}>
+            <a href="#contact" className="flex-1 text-center py-2.5 rounded-lg text-sm font-bold" style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#fff' }} onClick={() => setOpen(false)}>
               Get Quote
             </a>
           </div>

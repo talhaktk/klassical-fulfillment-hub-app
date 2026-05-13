@@ -7,6 +7,7 @@ import WhyKlassical           from '@/components/site/WhyKlassical'
 import Services               from '@/components/site/Services'
 import Pricing                from '@/components/site/Pricing'
 import SellerDashboardSection from '@/components/site/SellerDashboardSection'
+import DigitalHub             from '@/components/site/DigitalHub'
 import ComingSoon             from '@/components/site/ComingSoon'
 import Partners               from '@/components/site/Partners'
 import AppDownload            from '@/components/site/AppDownload'
@@ -37,10 +38,11 @@ export default function LandingPage() {
         <StatsBar />
         <WhyKlassical />
         <Services />
-        <Pricing />
+        <DigitalHub />
         <SellerDashboardSection />
-        <ComingSoon />
+        <Pricing />
         <Partners />
+        <ComingSoon />
         <AppDownload />
         <Contact />
       </main>

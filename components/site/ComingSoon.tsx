@@ -16,7 +16,7 @@ export default function ComingSoon() {
   return (
     <>
       {/* Launched section */}
-      <section style={{ background: '#F0F7FF', borderTop: '1px solid #D0E0F0', borderBottom: '1px solid #D0E0F0' }}>
+      <section id="partner-program" style={{ background: '#F0F7FF', borderTop: '1px solid #D0E0F0', borderBottom: '1px solid #D0E0F0' }}>
         <div className="max-w-6xl mx-auto px-5 py-14">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
             <div className="md:max-w-xs">

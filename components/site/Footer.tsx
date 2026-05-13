@@ -5,45 +5,45 @@ const COLS = [
   {
     heading: 'Company',
     links: [
-      { label: 'About Us',      href: '#' },
-      { label: 'Contact',       href: '#contact' },
-      { label: 'Careers',       href: '#' },
-      { label: 'Blog',          href: '#' },
+      { label: 'About Us',     href: '#why'     },
+      { label: 'Contact',      href: '#contact' },
+      { label: 'Careers',      href: '#contact' },
+      { label: 'Partner Program', href: '#partner-program' },
     ],
   },
   {
     heading: 'Services',
     links: [
-      { label: 'Pick & Pack',        href: '#services' },
-      { label: 'Storage',            href: '#services' },
-      { label: 'Returns',            href: '#services' },
-      { label: 'Custom Packaging',   href: '#services' },
-      { label: 'B2B Dispatch',       href: '#services' },
+      { label: 'Warehouse & Storage',   href: '#services' },
+      { label: 'Prep & Fulfillment',    href: '#services' },
+      { label: 'Sourcing & Inspection', href: '#services' },
+      { label: 'AI Automation',         href: '#digital-hub' },
+      { label: 'Returns Processing',    href: '#services' },
     ],
   },
   {
     heading: 'Integrations',
     links: [
-      { label: 'Shopify',       href: '#partners' },
-      { label: 'Amazon',        href: '#partners' },
-      { label: 'TikTok Shop',   href: '#partners' },
-      { label: 'WooCommerce',   href: '#partners' },
-      { label: 'Royal Mail',    href: '#partners' },
+      { label: 'Shopify',      href: '#partners' },
+      { label: 'Amazon',       href: '#partners' },
+      { label: 'TikTok Shop',  href: '#partners' },
+      { label: 'WooCommerce',  href: '#partners' },
+      { label: 'Royal Mail',   href: '#partners' },
     ],
   },
   {
     heading: 'Legal',
     links: [
-      { label: 'Privacy Policy',    href: '#' },
-      { label: 'Terms of Service',  href: '#' },
-      { label: 'Cookie Policy',     href: '#' },
+      { label: 'Privacy Policy',   href: '#' },
+      { label: 'Terms of Service', href: '#' },
+      { label: 'Cookie Policy',    href: '#' },
     ],
   },
 ]
 
 export default function Footer() {
   return (
-    <footer style={{ background: '#060E1C', borderTop: '1px solid rgba(200,151,26,.15)' }}>
+    <footer style={{ background: '#F4F6FA', borderTop: '1px solid #E8ECF2' }}>
       <div className="max-w-6xl mx-auto px-5 pt-14 pb-8">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand col */}
@@ -56,11 +56,11 @@ export default function Footer() {
                 KH
               </div>
               <div>
-                <div className="text-white font-bold text-sm leading-tight" style={{ fontFamily: 'Playfair Display, serif' }}>Klassical</div>
+                <div className="font-bold text-sm leading-tight" style={{ fontFamily: 'Playfair Display, serif', color: '#0A1628' }}>Klassical</div>
                 <div className="text-[9px] uppercase tracking-[2px]" style={{ color: '#C8971A' }}>Holdings Ltd</div>
               </div>
             </div>
-            <p className="text-xs leading-relaxed mb-4" style={{ color: '#4A5A70' }}>
+            <p className="text-xs leading-relaxed mb-4" style={{ color: '#7A8BA0' }}>
               Premium UK 3PL fulfillment. Smart storage, seamless delivery — Luton, UK.
             </p>
             <div className="flex gap-2">
@@ -69,7 +69,7 @@ export default function Footer() {
                   key={icon}
                   href="#contact"
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all"
-                  style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.08)' }}
+                  style={{ background: '#fff', border: '1px solid #E8ECF2' }}
                 >
                   {icon}
                 </a>
@@ -88,9 +88,9 @@ export default function Footer() {
                     <a
                       href={link.href}
                       className="text-xs transition-colors"
-                      style={{ color: '#4A5A70' }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#B8C4D4')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#4A5A70')}
+                      style={{ color: '#7A8BA0' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#0A1628')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#7A8BA0')}
                     >
                       {link.label}
                     </a>
@@ -101,12 +101,15 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,.06)' }}>
-          <p className="text-xs" style={{ color: '#3A4A5A' }}>
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6"
+          style={{ borderTop: '1px solid #E8ECF2' }}
+        >
+          <p className="text-xs" style={{ color: '#B8C4D4' }}>
             © {new Date().getFullYear()} Klassical Holdings Ltd. All rights reserved. Registered in England &amp; Wales.
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: '#3A4A5A' }}>Staff portal:</span>
+            <span className="text-xs" style={{ color: '#B8C4D4' }}>Staff portal:</span>
             <Link
               href="/auth/login"
               className="text-xs font-semibold transition-colors"
