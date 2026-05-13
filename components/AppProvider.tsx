@@ -23,8 +23,9 @@ export default function AppProvider({ children }: { children: React.ReactNode })
 
         // Fallback: use user_metadata if profile missing
         const meta = session.user.user_metadata ?? {}
-        const role  = profile?.role ?? meta.role ?? 'warehouse_staff'
-        const name  = profile?.name ?? meta.name ?? session.user.email?.split('@')[0] ?? 'User'
+        // user_metadata.role is set by fix-admin and is reliable even when RLS blocks profile read
+        const role  = meta.role ?? profile?.role ?? 'warehouse_staff'
+        const name  = meta.name ?? profile?.name ?? session.user.email?.split('@')[0] ?? 'User'
 
         setCurrentUser({
           id:        session.user.id,
