@@ -28,6 +28,7 @@ const warehouseNav: { section: string; items: NavItem[] }[] = [
       { label: 'Messages',          href: '/messages',       icon: '💬' },
       { label: 'Analytics',         href: '/analytics',      icon: '📈' },
       { label: 'Bank & Payments',   href: '/payments',       icon: '🏦' },
+      { label: 'Staff & Payroll',   href: '/staff',          icon: '👤' },
     ],
   },
 ]
