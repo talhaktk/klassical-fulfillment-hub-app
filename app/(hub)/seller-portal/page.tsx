@@ -23,13 +23,20 @@ function SellerPortalInner() {
     if (paramTab && VALID_TABS.includes(paramTab) && paramTab !== tab) setTab(paramTab)
   }, [paramTab])
 
-  // Seller users are locked to their own seller account
-  const defaultSellerId = currentUser?.role === 'seller' && currentUser.seller_id
+  const isSellerRole = role === 'seller'
+
+  const defaultSellerId = isSellerRole && currentUser?.seller_id
     ? currentUser.seller_id
     : (sellers[0]?.id ?? '')
 
   const [activeSeller, setActiveSeller] = useState(defaultSellerId)
-  const isSellerRole = role === 'seller'
+
+  // Re-lock when currentUser loads asynchronously
+  useEffect(() => {
+    if (isSellerRole && currentUser?.seller_id) {
+      setActiveSeller(currentUser.seller_id)
+    }
+  }, [isSellerRole, currentUser?.seller_id])
 
   const seller       = sellers.find(s => s.id === activeSeller)
   const sellerOrders = orders.filter(o => o.seller_id === activeSeller)

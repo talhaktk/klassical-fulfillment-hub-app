@@ -7,18 +7,33 @@ import toast from 'react-hot-toast'
 import type { Message } from '@/types/database'
 
 export default function MessagesPage() {
-  const { messages, sellers, loadMessages } = useStore()
-  const [activeSeller, setActiveSeller]   = useState<string | null>(null)
-  const [compose, setCompose]             = useState('')
-  const [drafting, setDrafting]           = useState(false)
-  const [sending,  setSending]            = useState(false)
+  const { messages, sellers, loadMessages, currentUser } = useStore()
+  const isSellerRole  = currentUser?.role === 'seller'
+  const mySellerID    = currentUser?.seller_id ?? null
+
+  const [activeSeller, setActiveSeller] = useState<string | null>(null)
+  const [compose, setCompose]           = useState('')
+  const [drafting, setDrafting]         = useState(false)
+  const [sending,  setSending]          = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  // Seller: auto-lock to their own seller account
+  useEffect(() => {
+    if (isSellerRole && mySellerID) {
+      setActiveSeller(mySellerID)
+      const msgs = messages.filter(m => m.seller_id === mySellerID)
+      const unread = msgs.filter(m => !m.read && m.sender_role === 'warehouse').map(m => m.id)
+      if (unread.length > 0) {
+        getSupabaseClient().from('messages').update({ read: true }).in('id', unread).then(() => loadMessages())
+      }
+    }
+  }, [isSellerRole, mySellerID])
 
   const sellerMessages = activeSeller
     ? messages.filter(m => m.seller_id === activeSeller)
     : []
 
-  // Unread count per seller
+  // Unread count per seller (warehouse view only)
   const unreadMap = sellers.reduce((acc, s) => {
     acc[s.id] = messages.filter(m => m.seller_id === s.id && !m.read && m.sender_role === 'seller').length
     return acc
@@ -34,7 +49,7 @@ export default function MessagesPage() {
     const db = getSupabaseClient()
     const { error } = await db.from('messages').insert({
       seller_id: activeSeller,
-      sender_role: 'warehouse',
+      sender_role: isSellerRole ? 'seller' : 'warehouse',
       content: compose.trim(),
       read: false,
     })
@@ -77,45 +92,49 @@ export default function MessagesPage() {
     markRead(msgs)
   }
 
+  const activeSel = sellers.find(s => s.id === activeSeller)
+
   return (
     <div className="p-6 animate-fadeIn" style={{ height: 'calc(100vh - 64px)' }}>
       <div className="flex gap-4 h-full">
-        {/* Seller list */}
-        <div className="w-64 shrink-0">
-          <div className="kh-card h-full flex flex-col !p-0 overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#E8ECF2]">
-              <div className="text-sm font-bold text-[#0E2040]">Messages</div>
-              <div className="text-xs text-[#7A8BA0]">{messages.filter(m => !m.read && m.sender_role === 'seller').length} unread</div>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              {sellers.map(s => {
-                const last    = messages.filter(m => m.seller_id === s.id)[0]
-                const unread  = unreadMap[s.id] ?? 0
-                const isActive = activeSeller === s.id
-                return (
-                  <button
-                    key={s.id}
-                    className="w-full text-left px-4 py-3 border-b border-[#E8ECF2] transition-colors"
-                    style={{ background: isActive ? 'linear-gradient(90deg,rgba(200,151,26,.1),transparent)' : undefined, borderLeft: isActive ? '3px solid #C8971A' : '3px solid transparent' }}
-                    onClick={() => handleSelectSeller(s.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-[#0E2040]">{s.icon} {s.name}</span>
-                      {unread > 0 && (
-                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#C0321E' }}>
-                          {unread}
-                        </span>
+        {/* Seller list — warehouse view only */}
+        {!isSellerRole && (
+          <div className="w-64 shrink-0">
+            <div className="kh-card h-full flex flex-col !p-0 overflow-hidden">
+              <div className="px-4 py-3 border-b border-[#E8ECF2]">
+                <div className="text-sm font-bold text-[#0E2040]">Messages</div>
+                <div className="text-xs text-[#7A8BA0]">{messages.filter(m => !m.read && m.sender_role === 'seller').length} unread</div>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                {sellers.map(s => {
+                  const last    = messages.filter(m => m.seller_id === s.id)[0]
+                  const unread  = unreadMap[s.id] ?? 0
+                  const isActive = activeSeller === s.id
+                  return (
+                    <button
+                      key={s.id}
+                      className="w-full text-left px-4 py-3 border-b border-[#E8ECF2] transition-colors"
+                      style={{ background: isActive ? 'linear-gradient(90deg,rgba(200,151,26,.1),transparent)' : undefined, borderLeft: isActive ? '3px solid #C8971A' : '3px solid transparent' }}
+                      onClick={() => handleSelectSeller(s.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-[#0E2040]">{s.icon} {s.name}</span>
+                        {unread > 0 && (
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#C0321E' }}>
+                            {unread}
+                          </span>
+                        )}
+                      </div>
+                      {last && (
+                        <div className="text-xs text-[#7A8BA0] truncate mt-0.5">{last.content}</div>
                       )}
-                    </div>
-                    {last && (
-                      <div className="text-xs text-[#7A8BA0] truncate mt-0.5">{last.content}</div>
-                    )}
-                  </button>
-                )
-              })}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Conversation */}
         <div className="flex-1 kh-card !p-0 flex flex-col overflow-hidden">
@@ -123,7 +142,7 @@ export default function MessagesPage() {
             <div className="flex-1 flex items-center justify-center text-[#7A8BA0]">
               <div className="text-center">
                 <div className="text-4xl mb-3">💬</div>
-                <div className="text-sm">Select a seller to view messages</div>
+                <div className="text-sm">{isSellerRole ? 'Loading your conversation…' : 'Select a seller to view messages'}</div>
               </div>
             </div>
           ) : (
@@ -131,11 +150,23 @@ export default function MessagesPage() {
               {/* Header */}
               <div className="px-5 py-3.5 border-b border-[#E8ECF2] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{sellers.find(s => s.id === activeSeller)?.icon}</span>
-                  <div>
-                    <div className="font-bold text-[#0E2040]">{sellers.find(s => s.id === activeSeller)?.name}</div>
-                    <div className="text-xs text-[#7A8BA0]">{sellerMessages.length} messages</div>
-                  </div>
+                  {isSellerRole ? (
+                    <>
+                      <span className="text-2xl">🏭</span>
+                      <div>
+                        <div className="font-bold text-[#0E2040]">Klassical Warehouse</div>
+                        <div className="text-xs text-[#7A8BA0]">{sellerMessages.length} messages</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-2xl">{activeSel?.icon}</span>
+                      <div>
+                        <div className="font-bold text-[#0E2040]">{activeSel?.name}</div>
+                        <div className="text-xs text-[#7A8BA0]">{sellerMessages.length} messages</div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -144,20 +175,21 @@ export default function MessagesPage() {
                 {sellerMessages.length === 0 ? (
                   <div className="text-center text-[#7A8BA0] text-sm py-8">No messages yet. Start the conversation.</div>
                 ) : sellerMessages.map(msg => {
-                  const isWarehouse = msg.sender_role === 'warehouse'
+                  // "mine" = right side. For warehouse view: warehouse is mine. For seller view: seller is mine.
+                  const isMine = isSellerRole ? msg.sender_role === 'seller' : msg.sender_role === 'warehouse'
                   return (
-                    <div key={msg.id} className={`flex ${isWarehouse ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                       <div
                         className="max-w-[70%] px-4 py-2.5 rounded-2xl text-sm"
                         style={{
-                          background: isWarehouse ? 'linear-gradient(135deg,#1B3A6B,#0E2040)' : '#F0F4FA',
-                          color:      isWarehouse ? '#fff' : '#2A3A50',
-                          borderBottomRightRadius: isWarehouse ? 4 : undefined,
-                          borderBottomLeftRadius:  !isWarehouse ? 4 : undefined,
+                          background: isMine ? 'linear-gradient(135deg,#1B3A6B,#0E2040)' : '#F0F4FA',
+                          color:      isMine ? '#fff' : '#2A3A50',
+                          borderBottomRightRadius: isMine ? 4 : undefined,
+                          borderBottomLeftRadius:  !isMine ? 4 : undefined,
                         }}
                       >
                         {msg.content}
-                        <div className={`text-[10px] mt-1 ${isWarehouse ? 'text-white/50' : 'text-[#7A8BA0]'}`}>
+                        <div className={`text-[10px] mt-1 ${isMine ? 'text-white/50' : 'text-[#7A8BA0]'}`}>
                           {fmtDate(msg.created_at)}
                         </div>
                       </div>
@@ -181,9 +213,11 @@ export default function MessagesPage() {
                     <button className="btn-gold btn-sm flex-1" onClick={handleSend} disabled={sending || !compose.trim()}>
                       {sending ? '…' : '↑ Send'}
                     </button>
-                    <button className="btn-ghost btn-sm flex-1 text-xs" onClick={handleAIDraft} disabled={drafting}>
-                      {drafting ? '…' : '✨ AI Draft'}
-                    </button>
+                    {!isSellerRole && (
+                      <button className="btn-ghost btn-sm flex-1 text-xs" onClick={handleAIDraft} disabled={drafting}>
+                        {drafting ? '…' : '✨ AI Draft'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
