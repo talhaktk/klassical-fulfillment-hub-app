@@ -1,19 +1,18 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useStore } from '@/store'
 import { fmtGBP, fmtDate, statusBadge } from '@/lib/utils'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import LabelUpload from '@/components/seller-portal/LabelUpload'
 import type { Seller, Order, Invoice, InventoryItem } from '@/types/database'
 
 type Tab = 'overview' | 'orders' | 'inventory' | 'invoices' | 'labels'
 const VALID_TABS: Tab[] = ['overview', 'orders', 'inventory', 'invoices', 'labels']
 
-export default function SellerPortalPage() {
+function SellerPortalInner() {
   const { sellers, orders, invoices, inventory, role, currentUser } = useStore()
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   const paramTab = searchParams.get('tab') as Tab | null
   const [tab, setTab] = useState<Tab>(
@@ -285,5 +284,13 @@ export default function SellerPortalPage() {
         </>
       )}
     </div>
+  )
+}
+
+export default function SellerPortalPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-[#7A8BA0]">Loading seller portal…</div>}>
+      <SellerPortalInner />
+    </Suspense>
   )
 }
