@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: '%s | Klassical HUB',
   },
   description: 'Professional 3PL warehouse management — Klassical Holdings Ltd, Luton UK',
-  manifest: '/manifest.webmanifest',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
