@@ -3,10 +3,13 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+type LoginTab = 'staff' | 'seller'
+
 export default function LoginPage() {
   const supabase = createClient()
   const router   = useRouter()
 
+  const [tab,      setTab]      = useState<LoginTab>('staff')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
@@ -23,7 +26,7 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push(tab === 'seller' ? '/seller-portal' : '/dashboard')
       router.refresh()
     }
   }
@@ -52,6 +55,23 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex rounded-xl mb-5 p-1" style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(200,151,26,.2)' }}>
+          {(['staff', 'seller'] as LoginTab[]).map(t => (
+            <button
+              key={t}
+              onClick={() => { setTab(t); setError('') }}
+              className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+              style={tab === t
+                ? { background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#0E2040' }
+                : { color: '#7A8BA0' }
+              }
+            >
+              {t === 'staff' ? '🏭 Staff Login' : '🛒 Seller Login'}
+            </button>
+          ))}
+        </div>
+
         {/* Card */}
         <div
           className="rounded-2xl p-8"
@@ -61,9 +81,13 @@ export default function LoginPage() {
             backdropFilter: 'blur(12px)',
           }}
         >
-          <h2 className="text-lg font-semibold text-white mb-1">Sign in to your account</h2>
+          <h2 className="text-lg font-semibold text-white mb-1">
+            {tab === 'staff' ? 'Warehouse Team Sign In' : 'Seller Portal Sign In'}
+          </h2>
           <p className="text-xs mb-6" style={{ color: '#7A8BA0' }}>
-            Use the credentials provided by your administrator.
+            {tab === 'staff'
+              ? 'Use your warehouse credentials. Contact your manager if locked out.'
+              : 'Access your orders, inventory & invoices. Credentials provided by Klassical team.'}
           </p>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
@@ -77,7 +101,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={tab === 'staff' ? 'staff@klassicalholdings.co.uk' : 'you@yourstore.com'}
                 className="w-full rounded-lg px-4 py-3 text-sm outline-none transition-all"
                 style={{
                   background: 'rgba(255,255,255,.07)',
@@ -123,7 +147,7 @@ export default function LoginPage() {
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
-              {loading ? 'Signing in…' : 'Sign In'}
+              {loading ? 'Signing in…' : tab === 'staff' ? 'Sign In to Warehouse Hub' : 'Sign In to Seller Portal'}
             </button>
           </form>
         </div>

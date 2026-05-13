@@ -20,43 +20,51 @@ export interface Seller {
 }
 
 export interface RateCard {
-  id:                 string
-  seller_id:          string
-  labour_per_order:   number
-  labour_extra_item:  number
-  storage_per_pallet: number
-  returns_per_item:   number
-  box_small:          number
-  box_medium:         number
-  bubble_wrap:        number
-  label_full:         number
-  label_print_only:   number
-  insert_print:       number
-  tissue_paper:       number
-  effective_from:     string
-  updated_at:         string
+  id:                      string
+  seller_id:               string
+  labour_per_order:        number
+  labour_extra_item:       number
+  storage_per_pallet:      number
+  returns_per_item:        number
+  box_small:               number
+  box_medium:              number
+  bubble_wrap:             number
+  label_full:              number
+  label_print_only:        number
+  insert_print:            number
+  tissue_paper:            number
+  // Weight-based receiving/handling
+  receiving_forwarding:    number
+  handling_under_12kg:     number
+  handling_12_25kg:        number
+  handling_over_25kg:      number
+  effective_from:          string
+  updated_at:              string
 }
 
 export interface InventoryItem {
-  id:                 string
-  seller_id:          string
-  product_name:       string
-  sku:                string
-  variant:            string | null
-  unit_price:         number
-  boxes_in:           number
-  units_per_box:      number
-  total_in:           number
-  damaged:            number
-  good_stock:         number
-  reserved:           number
-  warehouse_location: string | null
-  condition:          Condition
-  unit_of_measure:    string
-  grn_ref:            string | null
-  created_at:         string
-  updated_at:         string
-  sellers?:           Seller
+  id:                     string
+  seller_id:              string
+  product_name:           string
+  sku:                    string
+  variant:                string | null
+  unit_price:             number
+  boxes_in:               number
+  units_per_box:          number
+  total_in:               number
+  damaged:                number
+  good_stock:             number
+  reserved:               number
+  warehouse_location:     string | null
+  condition:              Condition
+  unit_of_measure:        string
+  grn_ref:                string | null
+  weight_per_box_kg:      number | null
+  weight_category:        'under_12kg' | '12_25kg' | 'over_25kg' | null
+  branding_price_per_unit:number | null
+  created_at:             string
+  updated_at:             string
+  sellers?:               Seller
 }
 
 export interface GRN {

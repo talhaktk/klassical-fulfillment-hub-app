@@ -1,19 +1,19 @@
 const PLATFORMS = [
-  { name: 'Shopify',          bg: '#96BF48', color: '#fff',     icon: '🛍️' },
-  { name: 'Amazon',           bg: '#FF9900', color: '#232F3E',  icon: '📦' },
-  { name: 'TikTok Shop',      bg: '#010101', color: '#FF0050',  icon: '🎵' },
-  { name: 'WooCommerce',      bg: '#7F54B3', color: '#fff',     icon: '🔌' },
-  { name: 'eBay',             bg: '#E53238', color: '#fff',     icon: '🏷️' },
-  { name: 'Etsy',             bg: '#F56400', color: '#fff',     icon: '🎨' },
+  { name: 'Shopify',       bg: '#96BF48', color: '#fff',    letter: 'S'  },
+  { name: 'Amazon',        bg: '#232F3E', color: '#FF9900', letter: 'a'  },
+  { name: 'TikTok Shop',   bg: '#010101', color: '#fff',    letter: 'tt' },
+  { name: 'WooCommerce',   bg: '#7F54B3', color: '#fff',    letter: 'W'  },
+  { name: 'eBay',          bg: '#fff',    color: '#E53238', letter: 'e'  },
+  { name: 'Etsy',          bg: '#F56400', color: '#fff',    letter: 'e'  },
 ]
 
 const CARRIERS = [
-  { name: 'Royal Mail',       bg: '#E22222', color: '#fff',     icon: '✉️' },
-  { name: 'DPD',              bg: '#DC0032', color: '#fff',     icon: '🚐' },
-  { name: 'Evri',             bg: '#9B59B6', color: '#fff',     icon: '📬' },
-  { name: 'Parcelforce',      bg: '#E85100', color: '#fff',     icon: '📮' },
-  { name: 'UPS',              bg: '#5B3427', color: '#FFB500',  icon: '🟤' },
-  { name: 'FedEx',            bg: '#4D148C', color: '#FF6600',  icon: '✈️' },
+  { name: 'Royal Mail',    bg: '#E22222', color: '#fff',    letter: 'RM' },
+  { name: 'DPD',           bg: '#DC0032', color: '#fff',    letter: 'DPD'},
+  { name: 'Evri',          bg: '#9B59B6', color: '#fff',    letter: 'ev' },
+  { name: 'Parcelforce',   bg: '#E85100', color: '#fff',    letter: 'P'  },
+  { name: 'UPS',           bg: '#5B3427', color: '#FFB500', letter: 'UPS'},
+  { name: 'FedEx',         bg: '#4D148C', color: '#FF6600', letter: 'FX' },
 ]
 
 function BadgeRow({ items }: { items: typeof PLATFORMS }) {
@@ -22,11 +22,21 @@ function BadgeRow({ items }: { items: typeof PLATFORMS }) {
       {items.map(p => (
         <div
           key={p.name}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
-          style={{ background: '#F8F9FC', border: '1px solid #E8ECF2', color: '#0E2040' }}
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
+          style={{
+            background: p.bg,
+            color: p.color,
+            border: p.bg === '#fff' ? '2px solid #E53238' : 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,.15)',
+          }}
         >
-          <span>{p.icon}</span>
-          <span>{p.name}</span>
+          <span
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0"
+            style={{ background: 'rgba(255,255,255,.2)', letterSpacing: -0.5, fontFamily: 'Arial, sans-serif' }}
+          >
+            {p.letter.toUpperCase().slice(0, 2)}
+          </span>
+          <span style={{ fontFamily: 'Arial, sans-serif', letterSpacing: '.2px' }}>{p.name}</span>
         </div>
       ))}
     </div>

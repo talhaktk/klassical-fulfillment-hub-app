@@ -78,20 +78,25 @@ export interface FulfillPayload {
 }
 
 export interface GRNPayload {
-  seller_id:      string
-  product_name:   string
-  sku:            string
-  variant:        string | null
-  unit_price:     number
-  boxes:          number
-  units_per_box:  number
-  total_in:       number
-  damaged:        number
-  condition:      string
-  location:       string
-  uom:            string
-  notes:          string
-  notify_seller:  boolean
+  seller_id:            string
+  product_name:         string
+  sku:                  string
+  variant:              string | null
+  unit_price:           number
+  boxes:                number
+  units_per_box:        number
+  total_in:             number
+  damaged:              number
+  condition:            string
+  location:             string
+  uom:                  string
+  notes:                string
+  notify_seller:        boolean
+  weight_per_box_kg:    number
+  weight_category:      'under_12kg' | '12_25kg' | 'over_25kg'
+  branding_price_per_unit: number
+  handling_charge:      number
+  branding_charge:      number
 }
 
 export interface TxPayload {
@@ -312,6 +317,9 @@ export const useStore = create<AppState>((set, get) => ({
         condition: payload.condition,
         warehouse_location: payload.location,
         grn_ref: ref,
+        weight_per_box_kg: payload.weight_per_box_kg || null,
+        weight_category: payload.weight_category || null,
+        branding_price_per_unit: payload.branding_price_per_unit || null,
         updated_at: new Date().toISOString(),
       }).eq('sku', payload.sku)
     } else {
@@ -331,6 +339,9 @@ export const useStore = create<AppState>((set, get) => ({
         condition: payload.condition,
         unit_of_measure: payload.uom,
         grn_ref: ref,
+        weight_per_box_kg: payload.weight_per_box_kg || null,
+        weight_category: payload.weight_category || null,
+        branding_price_per_unit: payload.branding_price_per_unit || null,
       })
     }
 
@@ -343,6 +354,56 @@ export const useStore = create<AppState>((set, get) => ({
       condition: payload.condition, notes: payload.notes,
       seller_notified: payload.notify_seller,
     })
+
+    // 3. Create handling + branding invoice if charges exist
+    const totalInvoice = (payload.handling_charge || 0) + (payload.branding_charge || 0)
+    if (totalInvoice > 0) {
+      const periodLabel = new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })
+      let { data: existingInv } = await db.from('invoices')
+        .select('*')
+        .eq('seller_id', payload.seller_id)
+        .eq('period_label', periodLabel)
+        .maybeSingle()
+
+      if (!existingInv) {
+        const invNum = `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`
+        const { data: newInv } = await db.from('invoices').insert({
+          invoice_number: invNum,
+          seller_id: payload.seller_id,
+          period_label: periodLabel,
+          period_start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+          period_end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
+          total_amount: totalInvoice,
+          status: 'pending',
+          due_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 25).toISOString().split('T')[0],
+        }).select().single()
+        existingInv = newInv
+      } else {
+        await db.from('invoices').update({ total_amount: (existingInv.total_amount || 0) + totalInvoice }).eq('id', existingInv.id)
+      }
+
+      if (existingInv) {
+        const lineItems = []
+        if (payload.handling_charge > 0) {
+          lineItems.push({
+            invoice_id: existingInv.id,
+            description: `Handling charge — GRN ${ref} (${payload.boxes} boxes × ${payload.weight_category?.replace(/_/g,' ') ?? ''} rate)`,
+            amount: payload.handling_charge,
+            item_type: 'handling',
+          })
+        }
+        if (payload.branding_charge > 0) {
+          lineItems.push({
+            invoice_id: existingInv.id,
+            description: `Branding/packaging — ${goodUnits} units × £${payload.branding_price_per_unit.toFixed(2)}`,
+            amount: payload.branding_charge,
+            item_type: 'branding',
+          })
+        }
+        if (lineItems.length > 0) await db.from('invoice_items').insert(lineItems)
+      }
+      await get().loadInvoices()
+    }
 
     await get().loadInventory()
   },

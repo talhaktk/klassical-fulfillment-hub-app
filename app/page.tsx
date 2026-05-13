@@ -1,17 +1,18 @@
 import type { Metadata } from 'next'
-import AnnouncementBar from '@/components/site/AnnouncementBar'
-import Navbar          from '@/components/site/Navbar'
-import Hero            from '@/components/site/Hero'
-import StatsBar        from '@/components/site/StatsBar'
-import WhyKlassical    from '@/components/site/WhyKlassical'
-import Services        from '@/components/site/Services'
-import Pricing         from '@/components/site/Pricing'
-import ComingSoon      from '@/components/site/ComingSoon'
-import Partners        from '@/components/site/Partners'
-import AppDownload     from '@/components/site/AppDownload'
-import Contact         from '@/components/site/Contact'
-import Footer          from '@/components/site/Footer'
-import WhatsAppFloat   from '@/components/site/WhatsAppFloat'
+import AnnouncementBar        from '@/components/site/AnnouncementBar'
+import Navbar                 from '@/components/site/Navbar'
+import Hero                   from '@/components/site/Hero'
+import StatsBar               from '@/components/site/StatsBar'
+import WhyKlassical           from '@/components/site/WhyKlassical'
+import Services               from '@/components/site/Services'
+import Pricing                from '@/components/site/Pricing'
+import SellerDashboardSection from '@/components/site/SellerDashboardSection'
+import ComingSoon             from '@/components/site/ComingSoon'
+import Partners               from '@/components/site/Partners'
+import AppDownload            from '@/components/site/AppDownload'
+import Contact                from '@/components/site/Contact'
+import Footer                 from '@/components/site/Footer'
+import WhatsAppFloat          from '@/components/site/WhatsAppFloat'
 
 export const metadata: Metadata = {
   title: 'Klassical Logistics & Fulfillment UK | Smart Storage. Seamless Delivery.',
@@ -37,6 +38,7 @@ export default function LandingPage() {
         <WhyKlassical />
         <Services />
         <Pricing />
+        <SellerDashboardSection />
         <ComingSoon />
         <Partners />
         <AppDownload />

@@ -1,33 +1,40 @@
+'use client'
 const SERVICES = [
   {
     icon: '🏭',
     title: 'Storage & Receiving',
     items: ['Pallet & shelving storage', 'GRN with condition reports', 'Barcode labelling on receipt', 'Climate-controlled zones available'],
+    image: '/images/warehouse-storage.jpg',
   },
   {
     icon: '⚡',
     title: 'Pick & Pack Fulfillment',
     items: ['Same-day dispatch (2pm cutoff)', 'Multi-item & multi-SKU orders', 'Fragile & oversized items', 'Tracked dispatch on every order'],
+    image: '/images/warehouse-prep.jpg',
   },
   {
     icon: '🎁',
     title: 'Custom Unboxing',
     items: ['Branded tissue & ribbon', 'Thank-you inserts & flyers', 'Custom outer & inner boxes', 'Bubble wrap & premium protection'],
+    image: null,
   },
   {
     icon: '🔄',
     title: 'Returns Processing',
     items: ['Inspection & condition grading', 'Restock or quarantine routing', 'Photo documentation', 'Seller portal visibility'],
+    image: null,
   },
   {
     icon: '🚛',
     title: 'B2B & Bulk Dispatch',
     items: ['Pallet dispatch to wholesalers', 'Amazon FBA prep & labelling', 'Retail compliance packing', 'Freight booking support'],
+    image: '/images/warehouse-dispatch.jpg',
   },
   {
     icon: '📈',
     title: 'Reporting & Analytics',
     items: ['Real-time seller dashboard', 'Monthly statements & invoices', 'Stock forecasting alerts', 'Carrier performance reports'],
+    image: null,
   },
 ]
 
@@ -57,27 +64,53 @@ export default function Services() {
           {SERVICES.map(s => (
             <div
               key={s.title}
-              className="rounded-2xl p-6 group transition-all hover:-translate-y-1 cursor-default"
+              className="rounded-2xl overflow-hidden group transition-all hover:-translate-y-1 cursor-default"
               style={{ background: '#F8F9FC', border: '1px solid #E8ECF2' }}
             >
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 transition-all"
-                style={{ background: 'linear-gradient(135deg,#0A1628,#142D56)', boxShadow: '0 4px 12px rgba(10,22,40,.15)' }}
-              >
-                {s.icon}
+              {/* Image banner */}
+              {s.image && (
+                <div
+                  className="h-40 w-full overflow-hidden relative"
+                  style={{ background: 'linear-gradient(135deg,#0A1628,#142D56)' }}
+                >
+                  <img
+                    src={s.image}
+                    alt={s.title}
+                    className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(10,22,40,.4))' }} />
+                </div>
+              )}
+
+              <div className="p-6">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 transition-all"
+                  style={{ background: 'linear-gradient(135deg,#0A1628,#142D56)', boxShadow: '0 4px 12px rgba(10,22,40,.15)' }}
+                >
+                  {s.icon}
+                </div>
+                <h3 className="font-bold text-base mb-3" style={{ color: '#0E2040' }}>{s.title}</h3>
+                <ul className="space-y-1.5">
+                  {s.items.map(item => (
+                    <li key={item} className="flex items-start gap-2 text-sm" style={{ color: '#6A7D9A' }}>
+                      <span className="mt-0.5 flex-shrink-0" style={{ color: '#C8971A' }}>→</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <h3 className="font-bold text-base mb-3" style={{ color: '#0E2040' }}>{s.title}</h3>
-              <ul className="space-y-1.5">
-                {s.items.map(item => (
-                  <li key={item} className="flex items-start gap-2 text-sm" style={{ color: '#6A7D9A' }}>
-                    <span className="mt-0.5 flex-shrink-0" style={{ color: '#C8971A' }}>→</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
             </div>
           ))}
         </div>
+
+        {/* Image guide note (only visible during development) */}
+        <p className="text-center text-xs mt-8" style={{ color: '#B8C4D4' }}>
+          Save warehouse photos to <code className="px-1 py-0.5 rounded text-[10px]" style={{ background: '#F0F4FA', color: '#2A4F8A' }}>public/images/</code> as
+          {' '}<code className="px-1 py-0.5 rounded text-[10px]" style={{ background: '#F0F4FA', color: '#2A4F8A' }}>warehouse-storage.jpg</code>,
+          {' '}<code className="px-1 py-0.5 rounded text-[10px]" style={{ background: '#F0F4FA', color: '#2A4F8A' }}>warehouse-prep.jpg</code>,
+          {' '}<code className="px-1 py-0.5 rounded text-[10px]" style={{ background: '#F0F4FA', color: '#2A4F8A' }}>warehouse-dispatch.jpg</code>
+        </p>
       </div>
     </section>
   )

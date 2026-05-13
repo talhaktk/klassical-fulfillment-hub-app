@@ -4,19 +4,51 @@ import { useStore } from '@/store'
 import { fmtGBP, fmtDate } from '@/lib/utils'
 import type { RateCard } from '@/types/database'
 
-const RATE_FIELDS: { key: keyof RateCard; label: string; desc: string }[] = [
-  { key: 'labour_per_order',   label: 'Labour per Order',      desc: 'Base pick & pack charge' },
-  { key: 'labour_extra_item',  label: 'Labour — Extra Item',   desc: 'Per additional item beyond first' },
-  { key: 'storage_per_pallet', label: 'Storage / Pallet',      desc: 'Monthly pallet storage fee' },
-  { key: 'returns_per_item',   label: 'Returns per Item',      desc: 'Returns processing fee' },
-  { key: 'box_small',          label: 'Small Box',             desc: 'Small shipping box' },
-  { key: 'box_medium',         label: 'Medium Box',            desc: 'Medium shipping box' },
-  { key: 'bubble_wrap',        label: 'Bubble Wrap',           desc: 'Per order packaging' },
-  { key: 'label_full',         label: 'Full Label',            desc: 'Branded label + print' },
-  { key: 'label_print_only',   label: 'Print Only Label',      desc: 'Label print only' },
-  { key: 'insert_print',       label: 'Insert / Flyer Print',  desc: 'Printed insert per order' },
-  { key: 'tissue_paper',       label: 'Tissue Paper Wrap',     desc: 'Premium tissue wrapping' },
+const RATE_GROUPS: { heading: string; fields: { key: keyof RateCard; label: string; desc: string }[] }[] = [
+  {
+    heading: 'Receiving & Handling (per box)',
+    fields: [
+      { key: 'receiving_forwarding',  label: 'Receiving & Forwarding',  desc: 'Standard receiving per box' },
+      { key: 'handling_under_12kg',   label: 'Box under 12 kg',         desc: 'Handling fee — light boxes' },
+      { key: 'handling_12_25kg',      label: 'Box 12–25 kg',            desc: 'Handling fee — medium boxes' },
+      { key: 'handling_over_25kg',    label: 'Box over 25 kg',          desc: 'Handling fee — heavy boxes' },
+    ],
+  },
+  {
+    heading: 'Pick & Pack',
+    fields: [
+      { key: 'labour_per_order',   label: 'Labour per Order',      desc: 'Base pick & pack charge' },
+      { key: 'labour_extra_item',  label: 'Labour — Extra Item',   desc: 'Per additional item beyond first' },
+    ],
+  },
+  {
+    heading: 'Storage & Returns',
+    fields: [
+      { key: 'storage_per_pallet', label: 'Storage / Pallet',      desc: 'Monthly pallet storage fee' },
+      { key: 'returns_per_item',   label: 'Returns per Item',      desc: 'Returns processing fee' },
+    ],
+  },
+  {
+    heading: 'Packaging',
+    fields: [
+      { key: 'box_small',          label: 'Small Box',             desc: 'Small shipping box' },
+      { key: 'box_medium',         label: 'Medium Box',            desc: 'Medium shipping box' },
+      { key: 'bubble_wrap',        label: 'Bubble Wrap',           desc: 'Per order packaging' },
+      { key: 'tissue_paper',       label: 'Tissue Paper Wrap',     desc: 'Premium tissue wrapping' },
+    ],
+  },
+  {
+    heading: 'Labels & Inserts',
+    fields: [
+      { key: 'label_full',         label: 'Full Label',            desc: 'Branded label + print' },
+      { key: 'label_print_only',   label: 'Print Only Label',      desc: 'Label print only' },
+      { key: 'insert_print',       label: 'Insert / Flyer Print',  desc: 'Printed insert per order' },
+    ],
+  },
 ]
+
+// Flat list for backwards-compat with getValue
+const RATE_FIELDS = RATE_GROUPS.flatMap(g => g.fields)
 
 export default function RateCardsPage() {
   const { sellers, ratecards, saveRateCard } = useStore()
@@ -113,31 +145,40 @@ export default function RateCardsPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                {RATE_FIELDS.map(f => {
-                  const current = getValue(f.key)
-                  const isDirty = f.key in edits
-                  return (
-                    <div key={f.key}>
-                      <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">
-                        {f.label}
-                        <span className="ml-1 normal-case font-normal">— {f.desc}</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A8BA0] text-sm">£</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="kh-input w-full !pl-7"
-                          style={{ borderColor: isDirty ? '#C8971A' : undefined }}
-                          value={current}
-                          onChange={e => handleChange(f.key, e.target.value)}
-                        />
-                      </div>
+              <div className="space-y-5">
+                {RATE_GROUPS.map(group => (
+                  <div key={group.heading}>
+                    <div className="text-[10px] uppercase tracking-[1.5px] font-bold mb-3 pb-1 border-b border-[#E8ECF2]" style={{ color: '#C8971A' }}>
+                      {group.heading}
                     </div>
-                  )
-                })}
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                      {group.fields.map(f => {
+                        const current = getValue(f.key)
+                        const isDirty = f.key in edits
+                        return (
+                          <div key={f.key}>
+                            <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">
+                              {f.label}
+                              <span className="ml-1 normal-case font-normal">— {f.desc}</span>
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7A8BA0] text-sm">£</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="kh-input w-full !pl-7"
+                                style={{ borderColor: isDirty ? '#C8971A' : undefined }}
+                                value={current}
+                                onChange={e => handleChange(f.key, e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {Object.keys(edits).length > 0 && (

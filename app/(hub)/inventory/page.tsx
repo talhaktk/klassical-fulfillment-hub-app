@@ -9,7 +9,7 @@ import type { InventoryItem } from '@/types/database'
 type InvTab = 'stock' | 'variants' | 'damaged'
 
 export default function InventoryPage() {
-  const { inventory, sellers, receiveGRN, loadInventory } = useStore()
+  const { inventory, sellers, ratecards, receiveGRN, loadInventory } = useStore()
   const [activeTab,  setActiveTab]  = useState<InvTab>('stock')
   const [searchQ,    setSearchQ]    = useState('')
   const [sellerF,    setSellerF]    = useState('all')
@@ -49,22 +49,41 @@ export default function InventoryPage() {
   }
 
   // GRN form state
-  const [gSeller,   setGSeller]   = useState(sellers[0]?.id ?? '')
-  const [gProduct,  setGProduct]  = useState('')
-  const [gSku,      setGSku]      = useState('')
-  const [gVariant,  setGVariant]  = useState('')
-  const [gPrice,    setGPrice]    = useState('')
-  const [gBoxes,    setGBoxes]    = useState(1)
-  const [gPerBox,   setGPerBox]   = useState(12)
-  const [gLocation, setGLocation] = useState('')
-  const [gUom,      setGUom]      = useState('Each')
-  const [gDamaged,  setGDamaged]  = useState(0)
-  const [gCond,     setGCond]     = useState('complete')
-  const [gNotes,    setGNotes]    = useState('')
-  const [gNotify,   setGNotify]   = useState(true)
+  const [gSeller,        setGSeller]        = useState(sellers[0]?.id ?? '')
+  const [gProduct,       setGProduct]       = useState('')
+  const [gSku,           setGSku]           = useState('')
+  const [gVariant,       setGVariant]       = useState('')
+  const [gPrice,         setGPrice]         = useState('')
+  const [gBoxes,         setGBoxes]         = useState(1)
+  const [gPerBox,        setGPerBox]        = useState(12)
+  const [gLocation,      setGLocation]      = useState('')
+  const [gUom,           setGUom]           = useState('Each')
+  const [gDamaged,       setGDamaged]       = useState(0)
+  const [gCond,          setGCond]          = useState('complete')
+  const [gNotes,         setGNotes]         = useState('')
+  const [gNotify,        setGNotify]        = useState(true)
+  const [gWeightKg,      setGWeightKg]      = useState<number | ''>('')
+  const [gBrandingPrice, setGBrandingPrice] = useState<number | ''>('')
 
-  const totalIn  = gBoxes * gPerBox
+  const totalIn   = gBoxes * gPerBox
   const goodUnits = Math.max(0, totalIn - gDamaged)
+
+  // Weight category derived from weight per box
+  const weightCat: 'under_12kg' | '12_25kg' | 'over_25kg' =
+    gWeightKg === '' || (gWeightKg as number) < 12 ? 'under_12kg'
+    : (gWeightKg as number) <= 25 ? '12_25kg'
+    : 'over_25kg'
+
+  const sellerRc = ratecards.find(r => r.seller_id === (gSeller || sellers[0]?.id))
+
+  const weightRate =
+    weightCat === 'under_12kg' ? (sellerRc?.handling_under_12kg ?? 3.40)
+    : weightCat === '12_25kg'  ? (sellerRc?.handling_12_25kg    ?? 4.40)
+    :                             (sellerRc?.handling_over_25kg  ?? 5.40)
+
+  const handlingCharge  = parseFloat((gBoxes * weightRate).toFixed(2))
+  const brandingCharge  = parseFloat(((gBrandingPrice as number || 0) * goodUnits).toFixed(2))
+  const totalGRNInvoice = parseFloat((handlingCharge + brandingCharge).toFixed(2))
 
   const filtered = inventory.filter(i => {
     const q = searchQ.toLowerCase()
@@ -95,12 +114,19 @@ export default function InventoryPage() {
         damaged: gDamaged, condition: gCond,
         location: gLocation, uom: gUom, notes: gNotes,
         notify_seller: gNotify,
+        weight_per_box_kg: gWeightKg as number || 0,
+        weight_category: weightCat,
+        branding_price_per_unit: gBrandingPrice as number || 0,
+        handling_charge: handlingCharge,
+        branding_charge: brandingCharge,
       }
       await receiveGRN(payload)
-      toast.success(`GRN ${grnRef} submitted — ${goodUnits} units added to inventory`)
+      const invoiceMsg = totalGRNInvoice > 0 ? ` · Invoice of £${totalGRNInvoice.toFixed(2)} added to statement` : ''
+      toast.success(`GRN ${grnRef} submitted — ${goodUnits} units added to inventory${invoiceMsg}`)
       setShowGRN(false)
       setGProduct(''); setGSku(''); setGVariant(''); setGPrice('')
       setGBoxes(1); setGPerBox(12); setGDamaged(0); setGLocation(''); setGNotes('')
+      setGWeightKg(''); setGBrandingPrice('')
       setGrnRef(`GRN-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`)
     } catch (e: any) {
       toast.error(e.message ?? 'Failed to submit GRN')
@@ -258,6 +284,56 @@ export default function InventoryPage() {
             </div>
           </div>
 
+          {/* Weight & Branding */}
+          <div className="rounded-xl p-4 mb-4" style={{ background: '#F0F7FF', border: '1px solid #D0E0F0' }}>
+            <div className="text-xs font-bold text-[#142D56] mb-3">⚖️ Weight & Branding — used for handling invoice</div>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-[#7A8BA0] font-semibold block mb-1">Weight per Box (kg)</label>
+                <input
+                  type="number" step="0.1" min={0} className="kh-input"
+                  placeholder="e.g. 8.5"
+                  value={gWeightKg}
+                  onChange={e => setGWeightKg(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-[#7A8BA0] font-semibold block mb-1">Weight Category</label>
+                <input
+                  className="kh-input bg-[#F8F9FC] font-semibold"
+                  readOnly
+                  value={gWeightKg === '' ? 'Enter weight above' : weightCat === 'under_12kg' ? '< 12 kg' : weightCat === '12_25kg' ? '12–25 kg' : '> 25 kg'}
+                  style={{ color: gWeightKg === '' ? '#B8C4D4' : '#142D56' }}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-[#7A8BA0] font-semibold block mb-1">
+                  Handling Rate (£/box)
+                  <span className="ml-1 font-normal" style={{ color: '#B8C4D4' }}>from rate card</span>
+                </label>
+                <input className="kh-input bg-[#F8F9FC] font-bold text-[#142D56]" readOnly value={`£${weightRate.toFixed(2)}`} />
+              </div>
+              <div>
+                <label className="text-xs text-[#7A8BA0] font-semibold block mb-1">Branding Price (£/unit)</label>
+                <input
+                  type="number" step="0.01" min={0} className="kh-input"
+                  placeholder="e.g. 0.50"
+                  value={gBrandingPrice}
+                  onChange={e => setGBrandingPrice(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                />
+              </div>
+            </div>
+
+            {/* Invoice preview */}
+            {totalGRNInvoice > 0 && (
+              <div className="mt-3 rounded-lg p-3 flex gap-6 text-xs" style={{ background: 'rgba(200,151,26,.08)', border: '1px solid rgba(200,151,26,.3)' }}>
+                <div><span className="text-[#7A8BA0]">Handling: </span><strong className="text-[#142D56]">£{handlingCharge.toFixed(2)}</strong> ({gBoxes} boxes × £{weightRate.toFixed(2)})</div>
+                {brandingCharge > 0 && <div><span className="text-[#7A8BA0]">Branding: </span><strong className="text-[#142D56]">£{brandingCharge.toFixed(2)}</strong> ({goodUnits} units × £{(gBrandingPrice as number || 0).toFixed(2)})</div>}
+                <div><span className="text-[#7A8BA0]">Invoice Total: </span><strong style={{ color: '#C8971A' }}>£{totalGRNInvoice.toFixed(2)}</strong> — will be added to seller statement</div>
+              </div>
+            )}
+          </div>
+
           <div className="mb-3">
             <label className="text-xs text-[#7A8BA0] font-semibold block mb-1">Damage Notes (if any)</label>
             <textarea className="kh-input !h-14 resize-none" placeholder="e.g. 3 boxes had water damage to outer packaging..." value={gNotes} onChange={e => setGNotes(e.target.value)} />
@@ -304,12 +380,12 @@ export default function InventoryPage() {
               <tr>
                 <th>SKU</th><th>Product</th><th>Variant</th><th>Seller</th>
                 <th>Price</th><th>Total In</th><th>Damaged</th><th>Good</th>
-                <th>Reserved</th><th>Available</th><th>Location</th><th>Condition</th><th>Status</th><th></th>
+                <th>Reserved</th><th>Available</th><th>Weight</th><th>Branding</th><th>Location</th><th>Condition</th><th>Status</th><th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={13} className="text-center py-8 text-[#7A8BA0]">No inventory items found</td></tr>
+                <tr><td colSpan={15} className="text-center py-8 text-[#7A8BA0]">No inventory items found</td></tr>
               ) : filtered.map(item => {
                 const avail = item.good_stock - item.reserved
                 const st    = avail <= 0 ? 'badge-red' : avail <= 5 ? 'badge-yellow' : 'badge-green'
@@ -325,6 +401,16 @@ export default function InventoryPage() {
                     <td className="text-center font-bold text-[#1A7A48]">{item.good_stock}</td>
                     <td className="text-center text-[#C85A00]">{item.reserved}</td>
                     <td className={`text-center font-bold ${avail > 10 ? 'text-[#1A7A48]' : avail > 0 ? 'text-[#C85A00]' : 'text-[#C0321E]'}`}>{avail}</td>
+                    <td className="text-xs text-center">
+                      {item.weight_per_box_kg
+                        ? <span className="badge badge-gray text-xs">{item.weight_per_box_kg}kg</span>
+                        : <span className="text-[#B8C4D4]">—</span>}
+                    </td>
+                    <td className="text-xs text-center">
+                      {item.branding_price_per_unit
+                        ? <span style={{ color: '#9E7410' }}>{fmtGBP(item.branding_price_per_unit)}</span>
+                        : <span className="text-[#B8C4D4]">—</span>}
+                    </td>
                     <td><span className="badge badge-gray text-xs">{item.warehouse_location ?? '—'}</span></td>
                     <td><span className={`badge ${conditionBadge(item.condition)} text-xs`}>{item.condition}</span></td>
                     <td><span className={`badge ${st} text-xs`}>{avail <= 0 ? 'Out of Stock' : avail <= 5 ? 'Low Stock' : 'In Stock'}</span></td>
