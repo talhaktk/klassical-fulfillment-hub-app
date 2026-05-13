@@ -5,7 +5,7 @@ import { useStore } from '@/store'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
-interface NavItem { label: string; href: string; icon: string; locked?: boolean; badge?: number }
+interface NavItem { label: string; href: string; icon: string; locked?: boolean; badge?: number; adminOnly?: boolean }
 
 const warehouseNav: { section: string; items: NavItem[] }[] = [
   {
@@ -33,8 +33,9 @@ const warehouseNav: { section: string; items: NavItem[] }[] = [
 ]
 
 const adminNav: NavItem[] = [
-  { label: 'Users & Roles', href: '/users',      icon: '👥' },
-  { label: 'Rate Cards',    href: '/rate-cards',  icon: '💰' },
+  { label: 'Users & Roles', href: '/users',        icon: '👥' },
+  { label: 'Rate Cards',    href: '/rate-cards',   icon: '💰' },
+  { label: 'Audit Logs',    href: '/audit-logs',   icon: '🛡️', adminOnly: true },
 ]
 
 const sellerNav: { section: string; items: NavItem[] }[] = [
@@ -151,7 +152,7 @@ export default function Sidebar() {
             <div className="px-4 pt-3.5 pb-1 text-[10px] uppercase tracking-[1.4px] font-bold" style={{ color: '#C8971A' }}>
               Configuration
             </div>
-            {adminNav.map(renderItem)}
+            {adminNav.filter(item => !item.adminOnly || role === 'admin').map(renderItem)}
           </div>
         )}
       </div>

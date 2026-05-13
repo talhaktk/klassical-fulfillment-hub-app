@@ -22,13 +22,6 @@ const ROLE_LABELS: Record<Role, string> = {
   seller:            'Seller',
 }
 
-const ROLE_PERMS: Record<Role, string[]> = {
-  admin:             ['Full system access', 'User management', 'All modules', 'Configuration'],
-  warehouse_manager: ['Orders & Fulfillment', 'Inventory', 'Billing', 'Analytics', 'Messages'],
-  warehouse_staff:   ['Orders & Fulfillment', 'Inventory (view)', 'Scanner access'],
-  seller:            ['Seller Portal only', 'Own orders & invoices', 'Messaging'],
-}
-
 const ROLE_COLORS: Record<Role, string> = {
   admin:             'badge-red',
   warehouse_manager: 'badge-navy',
@@ -42,15 +35,16 @@ function getInitials(name: string) {
 
 export default function UsersPage() {
   const { currentUser, sellers } = useStore()
-  const [users,   setUsers]   = useState<UserProfile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [modal,   setModal]   = useState<Partial<UserProfile> & { isNew?: boolean } | null>(null)
-  const [saving,  setSaving]  = useState(false)
+  const [users,        setUsers]        = useState<UserProfile[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [modal,        setModal]        = useState<(Partial<UserProfile> & { isNew?: boolean; password?: string }) | null>(null)
+  const [saving,       setSaving]       = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<UserProfile | null>(null)
+  const [deleting,     setDeleting]     = useState(false)
 
   const isAdmin   = currentUser?.role === 'admin'
   const canManage = isAdmin || currentUser?.role === 'warehouse_manager'
 
-  // Roles a warehouse_manager can assign (not admin, not another manager)
   const allowedRoles: Role[] = isAdmin
     ? ['admin', 'warehouse_manager', 'warehouse_staff', 'seller']
     : ['warehouse_staff', 'seller']
@@ -63,14 +57,10 @@ export default function UsersPage() {
       const { data: { users: authUsers } } = await db.auth.admin?.listUsers?.() ?? { data: { users: [] } }
       const emailMap: Record<string, string> = {}
       authUsers?.forEach((u: any) => { emailMap[u.id] = u.email })
-
       setUsers(profiles.map(p => ({
-        id:        p.id,
-        name:      p.name,
-        email:     emailMap[p.id] ?? '—',
-        role:      p.role as Role,
-        seller_id: p.seller_id,
-        status:    p.status as 'active' | 'inactive',
+        id: p.id, name: p.name, email: emailMap[p.id] ?? '—',
+        role: p.role as Role, seller_id: p.seller_id,
+        status: p.status as 'active' | 'inactive',
       })))
     }
     setLoading(false)
@@ -84,30 +74,40 @@ export default function UsersPage() {
     const db = getSupabaseClient()
 
     if (modal.isNew) {
+      if (!modal.password || modal.password.length < 8) {
+        toast.error('Password must be at least 8 characters')
+        setSaving(false)
+        return
+      }
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: modal.name, email: modal.email, role: modal.role, seller_id: modal.seller_id }),
+        body: JSON.stringify({ name: modal.name, email: modal.email, role: modal.role, seller_id: modal.seller_id, password: modal.password }),
       })
-      if (res.ok) {
-        toast.success('Invite sent successfully')
-        setModal(null)
-        loadUsers()
-      } else {
-        const err = await res.json()
-        toast.error(err.error ?? 'Failed to invite user')
-      }
+      if (res.ok) { toast.success('User created successfully'); setModal(null); loadUsers() }
+      else { const err = await res.json(); toast.error(err.error ?? 'Failed to create user') }
     } else {
       const { error } = await db.from('user_profiles').update({
-        name:      modal.name,
-        role:      modal.role,
-        seller_id: modal.seller_id ?? null,
-        status:    modal.status,
+        name: modal.name, role: modal.role,
+        seller_id: modal.seller_id ?? null, status: modal.status,
       }).eq('id', modal.id!)
       if (error) toast.error(error.message)
       else { toast.success('User updated'); setModal(null); loadUsers() }
     }
     setSaving(false)
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const res = await fetch('/api/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: deleteTarget.id, userEmail: deleteTarget.email }),
+    })
+    if (res.ok) { toast.success(`${deleteTarget.name} deleted`); setDeleteTarget(null); loadUsers() }
+    else { const err = await res.json(); toast.error(err.error ?? 'Failed to delete user') }
+    setDeleting(false)
   }
 
   async function handleToggleStatus(user: UserProfile) {
@@ -116,70 +116,43 @@ export default function UsersPage() {
     const newStatus = user.status === 'active' ? 'inactive' : 'active'
     const { error } = await db.from('user_profiles').update({ status: newStatus }).eq('id', user.id)
     if (error) toast.error(error.message)
-    else {
-      toast.success(`User ${newStatus === 'active' ? 'activated' : 'deactivated'}`)
-      loadUsers()
-    }
+    else { toast.success(`User ${newStatus}`); loadUsers() }
   }
 
   return (
     <div className="p-6 animate-fadeIn">
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#0E2040]" style={{ fontFamily: 'Playfair Display, serif' }}>Users &amp; Roles</h1>
-          <p className="text-sm text-[#7A8BA0] mt-0.5">
-            {users.filter(u => u.status === 'active').length} active users · role-based access control
-          </p>
+          <p className="text-sm text-[#7A8BA0] mt-0.5">{users.filter(u => u.status === 'active').length} active users · role-based access</p>
         </div>
         {canManage && (
-          <button
-            className="btn-gold btn-sm"
-            onClick={() => setModal({ isNew: true, name: '', email: '', role: 'warehouse_staff', seller_id: null, status: 'active' })}
-          >
-            + Invite User
+          <button className="btn-gold btn-sm" onClick={() => setModal({ isNew: true, name: '', email: '', role: 'warehouse_staff', seller_id: null, status: 'active', password: '' })}>
+            + Add User
           </button>
         )}
       </div>
 
-      {/* Role permission matrix */}
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
-        {(Object.keys(ROLE_LABELS) as Role[]).map(r => (
-          <div key={r} className="kh-card" style={{ borderTopColor: r === 'admin' ? '#C0321E' : r === 'warehouse_manager' ? '#1B3A6B' : r === 'warehouse_staff' ? '#2A6DC8' : '#C8971A' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className={`badge ${ROLE_COLORS[r]}`}>{ROLE_LABELS[r]}</span>
-              <span className="text-xs text-[#7A8BA0]">{users.filter(u => u.role === r && u.status === 'active').length} users</span>
-            </div>
-            <ul className="space-y-1">
-              {ROLE_PERMS[r].map(p => (
-                <li key={p} className="text-xs text-[#4A5A70] flex items-center gap-1.5">
-                  <span className="text-[#1A7A48]">✓</span> {p}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-
-      {/* User table */}
       <div className="kh-card">
         {loading ? (
           <div className="text-center py-8 text-sm text-[#7A8BA0]">Loading users…</div>
         ) : users.length === 0 ? (
-          <div className="text-center py-8 text-sm text-[#7A8BA0]">No users found. Invite your first user above.</div>
+          <div className="text-center py-8 text-sm text-[#7A8BA0]">No users yet. Add your first user above.</div>
         ) : (
           <table className="kh-table">
             <thead>
-              <tr><th>User</th><th>Email</th><th>Role</th><th>Status</th>{canManage && <th>Actions</th>}</tr>
+              <tr>
+                <th>User</th><th>Email</th><th>Role</th><th>Status</th>
+                {canManage && <th>Actions</th>}
+              </tr>
             </thead>
             <tbody>
               {users.map(u => (
                 <tr key={u.id}>
                   <td>
                     <div className="flex items-center gap-2">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg,#1B3A6B,#2A6DC8)', color: 'white' }}
-                      >
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg,#1B3A6B,#2A6DC8)', color: 'white' }}>
                         {getInitials(u.name)}
                       </div>
                       <span className="font-semibold text-[#0E2040]">{u.name}</span>
@@ -204,6 +177,11 @@ export default function UsersPage() {
                             {u.status === 'active' ? '⏸' : '▶'}
                           </button>
                         )}
+                        {isAdmin && u.id !== currentUser?.id && (
+                          <button className="btn-ghost btn-sm" style={{ color: '#C0321E' }} onClick={() => setDeleteTarget(u)}>
+                            🗑️
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -214,28 +192,33 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* Edit / Invite modal */}
+      {/* Create / Edit modal */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(14,32,64,.7)' }}>
-          <div className="kh-card w-[440px]" style={{ border: '1px solid rgba(200,151,26,.4)' }}>
-            <div className="text-base font-bold text-[#0E2040] mb-4">{modal.isNew ? 'Invite User' : 'Edit User'}</div>
+          <div className="kh-card w-[460px] max-h-[90vh] overflow-y-auto" style={{ border: '1px solid rgba(200,151,26,.4)' }}>
+            <div className="text-base font-bold text-[#0E2040] mb-4">{modal.isNew ? '+ Add User Directly' : 'Edit User'}</div>
             <div className="flex flex-col gap-3">
               <div>
                 <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">Full Name</label>
                 <input className="kh-input w-full" value={modal.name ?? ''} onChange={e => setModal(m => m ? { ...m, name: e.target.value } : m)} />
               </div>
               {modal.isNew && (
-                <div>
-                  <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">Email</label>
-                  <input className="kh-input w-full" type="email" value={modal.email ?? ''} onChange={e => setModal(m => m ? { ...m, email: e.target.value } : m)} />
-                </div>
+                <>
+                  <div>
+                    <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">Email</label>
+                    <input className="kh-input w-full" type="email" value={modal.email ?? ''} onChange={e => setModal(m => m ? { ...m, email: e.target.value } : m)} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">Password (min 8 chars)</label>
+                    <input className="kh-input w-full" type="password" placeholder="Set a temporary password" value={modal.password ?? ''} onChange={e => setModal(m => m ? { ...m, password: e.target.value } : m)} />
+                  </div>
+                </>
               )}
               <div>
                 <label className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1 block">Role</label>
-                <select className="kh-input w-full" value={modal.role ?? 'warehouse_staff'} onChange={e => setModal(m => m ? { ...m, role: e.target.value as Role, seller_id: e.target.value !== 'seller' ? null : m.seller_id } : m)}>
-                  {allowedRoles.map(r => (
-                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                  ))}
+                <select className="kh-input w-full" value={modal.role ?? 'warehouse_staff'}
+                  onChange={e => setModal(m => m ? { ...m, role: e.target.value as Role, seller_id: e.target.value !== 'seller' ? null : m.seller_id } : m)}>
+                  {allowedRoles.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                 </select>
               </div>
               {modal.role === 'seller' && (
@@ -247,15 +230,35 @@ export default function UsersPage() {
                   </select>
                 </div>
               )}
-            </div>
-            <div className="mt-4 p-3 rounded-lg text-xs text-[#4A5A70]" style={{ background: '#F0F4FA' }}>
-              <strong>Permissions:</strong> {ROLE_PERMS[modal.role ?? 'warehouse_staff'].join(' · ')}
+              {modal.isNew && (
+                <div className="rounded-lg p-3 text-xs" style={{ background: '#F0F8FF', border: '1px solid #D0E8FF', color: '#2A4F8A' }}>
+                  ℹ️ User is created immediately — no email needed. Share the email + password directly with them.
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-4">
               <button className="btn-gold flex-1" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : modal.isNew ? 'Send Invite' : 'Update User'}
+                {saving ? 'Saving…' : modal.isNew ? 'Create User' : 'Update User'}
               </button>
               <button className="btn-ghost flex-1" onClick={() => setModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(14,32,64,.7)' }}>
+          <div className="kh-card w-[400px]" style={{ border: '1px solid rgba(192,50,30,.4)' }}>
+            <div className="text-base font-bold text-[#C0321E] mb-2">🗑️ Delete User</div>
+            <p className="text-sm text-[#4A5A70] mb-1">Are you sure you want to permanently delete:</p>
+            <p className="text-sm font-bold text-[#0E2040] mb-4">{deleteTarget.name} ({deleteTarget.email})</p>
+            <p className="text-xs text-[#C0321E] mb-4">This cannot be undone. The user will lose all access immediately.</p>
+            <div className="flex gap-2">
+              <button className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white" style={{ background: '#C0321E' }} onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Yes, Delete'}
+              </button>
+              <button className="btn-ghost flex-1" onClick={() => setDeleteTarget(null)}>Cancel</button>
             </div>
           </div>
         </div>
