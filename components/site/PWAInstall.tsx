@@ -7,11 +7,11 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'banner' }) {
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [prompt,    setPrompt]    = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(false)
+  const [showTip,   setShowTip]   = useState(false)
 
   useEffect(() => {
-    // Already running as standalone PWA
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true)
       return
@@ -23,16 +23,18 @@ export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'b
     }
     window.addEventListener('beforeinstallprompt', handler)
     window.addEventListener('appinstalled', () => setInstalled(true))
-
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  async function install() {
-    if (!prompt) return
-    await prompt.prompt()
-    const { outcome } = await prompt.userChoice
-    if (outcome === 'accepted') setInstalled(true)
-    setPrompt(null)
+  async function handleClick() {
+    if (prompt) {
+      await prompt.prompt()
+      const { outcome } = await prompt.userChoice
+      if (outcome === 'accepted') setInstalled(true)
+      setPrompt(null)
+    } else {
+      setShowTip(v => !v)
+    }
   }
 
   if (installed) {
@@ -40,7 +42,7 @@ export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'b
     return (
       <div
         className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold"
-        style={{ background: 'rgba(26,122,72,.2)', color: '#5EE8A0', border: '1px solid rgba(26,122,72,.4)' }}
+        style={{ background: 'rgba(26,122,72,.15)', color: '#1A7A48', border: '1px solid rgba(26,122,72,.3)' }}
       >
         <span>✓</span> App installed
       </div>
@@ -58,14 +60,14 @@ export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'b
         <div className="flex items-center gap-3">
           <span className="text-xl">📲</span>
           <div>
-            <div className="text-sm font-bold text-white">Install the app</div>
+            <div className="text-sm font-bold" style={{ color: '#0A1628' }}>Install the app</div>
             <div className="text-xs" style={{ color: '#7A8BA0' }}>Works offline · Available on Android &amp; desktop</div>
           </div>
         </div>
         <button
-          onClick={install}
+          onClick={handleClick}
           className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all"
-          style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#0A1628' }}
+          style={{ background: 'linear-gradient(135deg,#9E7410,#D4A520)', color: '#fff' }}
         >
           Install
         </button>
@@ -74,20 +76,56 @@ export default function PWAInstall({ variant = 'hero' }: { variant?: 'hero' | 'b
   }
 
   return (
-    <button
-      onClick={prompt ? install : undefined}
-      className="inline-flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold border transition-all"
-      style={{
-        color: '#B8C4D4',
-        borderColor: 'rgba(184,196,212,.25)',
-        background: 'rgba(255,255,255,.05)',
-        cursor: prompt ? 'pointer' : 'default',
-        opacity: prompt ? 1 : 0.6,
-      }}
-      title={!prompt ? 'Open in Chrome/Edge to install' : undefined}
-    >
-      <span className="text-base">📲</span>
-      {prompt ? 'Install App' : 'Add to Home Screen'}
-    </button>
+    <div className="relative inline-block">
+      <button
+        onClick={handleClick}
+        className="inline-flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold border transition-all"
+        style={{
+          color: '#4A5A70',
+          borderColor: '#D0D8E8',
+          background: '#fff',
+          cursor: 'pointer',
+        }}
+      >
+        <span className="text-base">📲</span>
+        {prompt ? 'Install App' : 'How to Install'}
+      </button>
+
+      {/* Instruction tooltip (shown when no native prompt) */}
+      {showTip && !prompt && (
+        <div
+          className="absolute left-0 top-full mt-2 rounded-xl shadow-xl text-left z-50"
+          style={{ background: '#fff', border: '1px solid #D0D8E8', minWidth: 260, boxShadow: '0 8px 32px rgba(10,22,40,.14)' }}
+        >
+          <div className="px-4 py-3 text-xs font-bold border-b" style={{ color: '#0A1628', borderColor: '#F0F4FA' }}>
+            Install Klassical HUB
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            {[
+              { icon: '🤖', label: 'Android / Chrome', tip: 'Tap ⋮ menu → Add to Home Screen' },
+              { icon: '🍎', label: 'iPhone / iPad',    tip: 'Tap Share → Add to Home Screen' },
+              { icon: '💻', label: 'Desktop Chrome',   tip: 'Click ⊕ in address bar → Install' },
+            ].map(p => (
+              <div key={p.label} className="flex items-start gap-2">
+                <span className="text-base">{p.icon}</span>
+                <div>
+                  <div className="font-semibold text-xs" style={{ color: '#0A1628' }}>{p.label}</div>
+                  <div className="text-[11px]" style={{ color: '#7A8BA0' }}>{p.tip}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-4 py-2.5 border-t" style={{ borderColor: '#F0F4FA' }}>
+            <button
+              onClick={() => setShowTip(false)}
+              className="text-[11px] font-semibold"
+              style={{ color: '#C8971A' }}
+            >
+              Got it ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

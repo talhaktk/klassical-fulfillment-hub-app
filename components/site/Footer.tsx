@@ -60,8 +60,11 @@ export default function Footer() {
                 <div className="text-[9px] uppercase tracking-[2px]" style={{ color: '#C8971A' }}>Holdings Ltd</div>
               </div>
             </div>
-            <p className="text-xs leading-relaxed mb-4" style={{ color: '#7A8BA0' }}>
-              Premium UK 3PL fulfillment. Smart storage, seamless delivery — Luton, UK.
+            <p className="text-xs leading-relaxed mb-1" style={{ color: '#7A8BA0' }}>
+              Premium UK 3PL fulfillment. Smart storage, seamless delivery.
+            </p>
+            <p className="text-xs mb-4" style={{ color: '#B8C4D4' }}>
+              25 Waleys Close, Luton, LU3 3RZ
             </p>
             <div className="flex gap-2">
               {['📧', '📱', '🌐'].map(icon => (
