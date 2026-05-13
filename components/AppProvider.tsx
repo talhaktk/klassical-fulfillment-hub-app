@@ -32,7 +32,7 @@ export default function AppProvider({ children }: { children: React.ReactNode })
           name,
           email:     session.user.email ?? '',
           role,
-          seller_id: profile?.seller_id ?? null,
+          seller_id: meta.seller_id ?? profile?.seller_id ?? null,
         })
         setRole(role)
       }

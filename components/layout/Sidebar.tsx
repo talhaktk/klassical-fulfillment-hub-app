@@ -43,12 +43,12 @@ const sellerNav: { section: string; items: NavItem[] }[] = [
   {
     section: 'My Seller Portal',
     items: [
-      { label: 'My Dashboard',  href: '/seller-portal',           icon: '🏠' },
-      { label: 'New Order',     href: '/seller-portal/new-order', icon: '➕' },
-      { label: 'My Orders',     href: '/seller-portal/orders',    icon: '📦' },
-      { label: 'My Inventory',  href: '/seller-portal/inventory', icon: '🗄️' },
-      { label: 'Billing',       href: '/seller-portal/billing',   icon: '🧾' },
-      { label: 'Messages',      href: '/seller-portal/messages',  icon: '💬' },
+      { label: 'My Dashboard',  href: '/seller-portal',               icon: '🏠' },
+      { label: 'New Order',     href: '/seller-portal?tab=labels',    icon: '➕' },
+      { label: 'My Orders',     href: '/seller-portal?tab=orders',    icon: '📦' },
+      { label: 'My Inventory',  href: '/seller-portal?tab=inventory', icon: '🗄️' },
+      { label: 'Billing',       href: '/seller-portal?tab=invoices',  icon: '🧾' },
+      { label: 'Messages',      href: '/messages',                    icon: '💬' },
     ],
   },
 ]
@@ -82,7 +82,8 @@ export default function Sidebar() {
   }
 
   function renderItem(item: NavItem) {
-    const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+    const hrefPath = item.href.split('?')[0]
+    const isActive = pathname === hrefPath || (hrefPath !== '/' && pathname.startsWith(hrefPath) && !item.href.includes('?'))
     const badgeCount = item.href === '/orders' ? pendingOrders
       : item.href === '/messages' || item.href === '/seller-portal/messages' ? unreadMessages
       : item.href === '/reminders' ? stats.overdueInvoices

@@ -79,6 +79,11 @@ export default function UsersPage() {
         setSaving(false)
         return
       }
+      if (modal.role === 'seller' && !modal.seller_id) {
+        toast.error('Please select a seller account for this user')
+        setSaving(false)
+        return
+      }
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

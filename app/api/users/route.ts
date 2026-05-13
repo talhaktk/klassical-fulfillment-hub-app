@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { name, role },
+    user_metadata: { name, role, seller_id: seller_id ?? null },
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
