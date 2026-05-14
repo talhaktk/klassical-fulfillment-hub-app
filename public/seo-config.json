@@ -1,40 +1,40 @@
 {
-  "lastUpdated": "2026-05-13T17:34:11.225Z",
+  "lastUpdated": "2026-05-14T13:11:30.681Z",
   "generatedBy": "SEO-Auto-Optimizer-v2.0",
-  "primaryKeyword": "Amazon fba, Amazon uk, 3pl, 3pl fba, 3pl tiktok,3pl products ,3pl warehouse \n",
+  "primaryKeyword": "Amazon fba, Amazon uk, 3pl, 3pl fba, 3pl tiktok,3pl products ,3pl warehouse",
   "websiteType": "warehouse",
   "title": "Reliable 3PL Warehouse for Amazon FBA UK",
-  "metaDescription": "Boost your supply chain with Klassical 3PL. Reliable Amazon FBA & e-commerce fulfillment. Contact us today!",
-  "h1": "Klassical Logistics & Fulfillment UK",
+  "metaDescription": "Boost your supply chain with Klassical's reliable 3PL services. Perfect for Amazon FBA. Contact us today!",
+  "h1": "Klassical Logistics: Your Trusted 3PL Partner",
   "keywords": [
+    "Amazon fba",
+    "Amazon uk",
+    "3pl",
+    "3pl fba",
+    "3pl tiktok",
+    "3pl products",
+    "3pl warehouse",
     "fulfillment",
-    "electronic sell through",
     "e commerce",
-    "e-commerce",
-    "ecommerce",
-    "what is e commerce",
-    "what is ecommerce",
-    "drop & ship",
-    "dropship",
-    "dropshippers"
+    "dropship"
   ],
   "focusKeyphrase": "Amazon fba",
   "schemaType": "LocalBusiness",
   "openGraph": {
-    "title": "Klassical Logistics: Your Trusted 3PL Partner",
-    "description": "Enhance your supply chain with Klassical 3PL's reliable Amazon FBA and e-commerce solutions. Discover our capacity and reliability."
+    "title": "Klassical Logistics: Reliable 3PL Services",
+    "description": "Discover Klassical's reliable 3PL solutions for Amazon FBA in the UK. Enhance your supply chain today!"
   },
   "backlinkStrategy": {
     "prioritySites": [
-      "logisticsnews.com",
-      "supplychaindive.com",
-      "warehousenews.co.uk"
+      "amazon.it",
+      "amazon.ie",
+      "amazon.com"
     ],
-    "outreachTemplate": "Hi [Name], I found your article on [topic] insightful. We offer unique 3PL solutions and would love to collaborate.",
+    "outreachTemplate": "Hi [Name], I noticed your expertise in logistics. Could we explore a partnership to enhance our 3PL services for Amazon FBA?",
     "anchorTextPlan": [
       {
         "type": "exact_match",
-        "text": "Amazon FBA services",
+        "text": "3PL warehouse",
         "targetPercent": 20
       },
       {
@@ -44,12 +44,12 @@
       },
       {
         "type": "partial_match",
-        "text": "3PL solutions",
+        "text": "Amazon FBA services",
         "targetPercent": 25
       },
       {
         "type": "generic",
-        "text": "learn more",
+        "text": "Learn more",
         "targetPercent": 15
       },
       {
@@ -59,18 +59,109 @@
       }
     ],
     "quickWins": [
-      "Guest posts on supply chain blogs",
-      "Collaborations with e-commerce influencers",
-      "Sponsorship of logistics webinars"
+      "Guest blogging on logistics sites",
+      "Collaborating with supply chain influencers",
+      "Participating in logistics forums"
     ],
     "contentIdeas": [
-      "Ultimate Guide to Amazon FBA",
-      "Case Study: Improving Supply Chain Efficiency"
+      "Ultimate Guide to 3PL for Amazon Sellers",
+      "Case Study: Successful 3PL Implementation"
     ]
   },
   "backlinkIntelligence": {
     "avgCompetitorDR": 0,
-    "topOpportunities": [],
+    "topOpportunities": [
+      {
+        "domain": "amazon.it",
+        "domainRank": 400,
+        "backlinksToComp": 257,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.ie",
+        "domainRank": 383,
+        "backlinksToComp": 60,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.com",
+        "domainRank": 361,
+        "backlinksToComp": 3148,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "54.239.37.146",
+        "domainRank": 356,
+        "backlinksToComp": 61567,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.in",
+        "domainRank": 351,
+        "backlinksToComp": 284,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.fr",
+        "domainRank": 349,
+        "backlinksToComp": 233,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.pl",
+        "domainRank": 348,
+        "backlinksToComp": 182,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.es",
+        "domainRank": 345,
+        "backlinksToComp": 378,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.co.za",
+        "domainRank": 344,
+        "backlinksToComp": 26,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      },
+      {
+        "domain": "amazon.nl",
+        "domainRank": 326,
+        "backlinksToComp": 137,
+        "doFollow": false,
+        "isGov": false,
+        "isEdu": false,
+        "isOrg": false
+      }
+    ],
     "suggestedAnchors": [
       "fulfillment",
       "electronic sell through",
