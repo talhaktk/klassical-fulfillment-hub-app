@@ -1,15 +1,19 @@
 import { MetadataRoute } from 'next'
- 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Logic to fetch all your SEO pages from your database/API
-  // const allPages = await getMySeoPages(); 
 
+export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: 'https://klassical3pl.com',
       lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 1,
     },
-    // The sitemap will automatically include new pages 
-    // if this code pulls from your dynamic data source.
+    {
+      url: 'https://klassical3pl.com/services',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    // Add other main pages here
   ]
 }
