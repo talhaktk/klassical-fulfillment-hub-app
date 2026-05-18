@@ -7,7 +7,7 @@ interface ChatMessage { role: 'user' | 'assistant'; content: string }
 export default function AIChat({ onClose }: { onClose: () => void }) {
   const { stats, orders, inventory } = useStore()
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: 'Hi! I\'m your Klassical warehouse AI. Ask me about stock levels ("How many units of SKU X?"), orders, invoices, low stock alerts, or any operational insight.' }
+    { role: 'assistant', content: 'Hi! I\'m your Klassical analytics assistant. Ask me about revenue, cash position, outstanding invoices, P&L, seller performance, stock valuation, or any financial insight.' }
   ])
   const [input, setInput]   = useState('')
   const [loading, setLoading] = useState(false)

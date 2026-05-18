@@ -61,24 +61,11 @@ function SimpleUpload({ sellerId, sellerInventory, onSuccess }: {
   onSuccess: () => void
 }) {
   const { loadOrders } = useStore()
-  const [step,      setStep]    = useState<'form' | 'confirm'>('form')
-  const [submitting,setSubmit]  = useState(false)
-
-  const [form, setForm] = useState({
-    customer_name:     '',
-    customer_address:  '',
-    customer_postcode: '',
-    carrier:           'Royal Mail',
-    tracking_number:   '',
-    notes:             '',
-  })
-  const [items,      setItems]      = useState<OrderItem[]>([])
+  const [step,       setStep]    = useState<'form' | 'confirm'>('form')
+  const [submitting, setSubmit]  = useState(false)
+  const [items,      setItems]   = useState<OrderItem[]>([])
   const [labelFile,  setLabelFile]  = useState<File | null>(null)
   const [labelPreview, setLabelPreview] = useState<string>('')
-
-  function setField(k: keyof typeof form, v: string) {
-    setForm(f => ({ ...f, [k]: v }))
-  }
 
   function addSku(sku: string) {
     if (!sku || items.find(i => i.sku === sku)) return
@@ -87,13 +74,11 @@ function SimpleUpload({ sellerId, sellerInventory, onSuccess }: {
     setItems(prev => [...prev, { sku, product_name: inv.product_name, quantity: 1, unit_price: inv.unit_price }])
   }
 
-  function updateQty(sku: string, qty: number) {
-    setItems(prev => prev.map(i => i.sku === sku ? { ...i, quantity: Math.max(1, qty) } : i))
+  function updateItem(sku: string, field: 'quantity' | 'unit_price', val: number) {
+    setItems(prev => prev.map(i => i.sku === sku ? { ...i, [field]: Math.max(field === 'quantity' ? 1 : 0, val) } : i))
   }
 
-  function removeItem(sku: string) {
-    setItems(prev => prev.filter(i => i.sku !== sku))
-  }
+  function removeItem(sku: string) { setItems(prev => prev.filter(i => i.sku !== sku)) }
 
   async function handleLabelFile(file: File) {
     setLabelFile(file)
@@ -108,10 +93,8 @@ function SimpleUpload({ sellerId, sellerInventory, onSuccess }: {
   }
 
   function validate() {
-    if (!form.customer_name.trim())    { toast.error('Customer name is required'); return false }
-    if (!form.customer_address.trim()) { toast.error('Delivery address is required'); return false }
-    if (!form.customer_postcode.trim()){ toast.error('Postcode is required'); return false }
-    if (!labelFile)                    { toast.error('Label upload is required'); return false }
+    if (items.length === 0) { toast.error('Add at least one SKU'); return false }
+    if (!labelFile)         { toast.error('Label upload is required'); return false }
     return true
   }
 
@@ -121,28 +104,14 @@ function SimpleUpload({ sellerId, sellerInventory, onSuccess }: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        orders: [{
-          seller_id:         sellerId,
-          customer_name:     form.customer_name,
-          customer_address:  form.customer_address,
-          customer_postcode: form.customer_postcode,
-          carrier:           form.carrier,
-          tracking_number:   form.tracking_number || null,
-          notes:             form.notes || null,
-          items,
-        }],
+        orders: [{ seller_id: sellerId, items }],
       }),
     })
     const data = await res.json()
     if (data.count > 0) {
       toast.success('Order created successfully')
-      setForm({ customer_name: '', customer_address: '', customer_postcode: '', carrier: 'Royal Mail', tracking_number: '', notes: '' })
-      setItems([])
-      setLabelFile(null)
-      setLabelPreview('')
-      setStep('form')
-      await loadOrders()
-      onSuccess()
+      setItems([]); setLabelFile(null); setLabelPreview(''); setStep('form')
+      await loadOrders(); onSuccess()
     } else if (data.errors?.length) {
       data.errors.forEach((e: string) => toast.error(e))
     }
@@ -151,160 +120,109 @@ function SimpleUpload({ sellerId, sellerInventory, onSuccess }: {
 
   const availableSkus = sellerInventory.filter(i => !items.find(it => it.sku === i.sku))
 
-  // ── Confirmation view ──────────────────────────────────────────────────────
+  // ── Confirmation ──────────────────────────────────────────────────────────
   if (step === 'confirm') {
     return (
       <div className="animate-fadeIn">
         <div className="rounded-xl overflow-hidden mb-5" style={{ border: '2px solid #C8971A' }}>
           <div className="px-4 py-3" style={{ background: 'rgba(200,151,26,.08)', borderBottom: '1px solid rgba(200,151,26,.25)' }}>
             <div className="text-sm font-bold text-[#142D56]">✅ Confirm Order</div>
-            <div className="text-xs text-[#7A8BA0] mt-0.5">Review all details before submitting</div>
+            <div className="text-xs text-[#7A8BA0] mt-0.5">Review before submitting</div>
           </div>
-          <div className="p-4 space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Customer</div>
-                <div className="font-semibold text-[#0E2040]">{form.customer_name}</div>
+          <div className="p-4 space-y-4">
+            <div>
+              <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-2">Items</div>
+              <div className="space-y-1.5">
+                {items.map(i => (
+                  <div key={i.sku} className="flex items-center justify-between rounded-lg px-3 py-2 text-xs" style={{ background: '#F4F6FA' }}>
+                    <span className="font-mono font-bold text-[#142D56] w-28 flex-shrink-0">{i.sku}</span>
+                    <span className="text-[#4A5A70] flex-1 mx-2 truncate">{i.product_name}</span>
+                    <span className="text-[#7A8BA0]">× {i.quantity}</span>
+                    <span className="font-semibold text-[#0E2040] ml-3">£{(i.unit_price * i.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
               </div>
-              <div>
-                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Postcode</div>
-                <div className="font-mono text-[#0E2040]">{form.customer_postcode}</div>
-              </div>
-              <div className="col-span-2">
-                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Address</div>
-                <div className="text-[#0E2040]">{form.customer_address}</div>
-              </div>
-              <div>
-                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Carrier</div>
-                <div>{form.carrier}</div>
-              </div>
-              {form.tracking_number && (
-                <div>
-                  <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Tracking</div>
-                  <div className="font-mono text-xs">{form.tracking_number}</div>
-                </div>
-              )}
             </div>
-
-            {items.length > 0 && (
-              <div>
-                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1.5">Items</div>
-                <div className="space-y-1">
-                  {items.map(i => (
-                    <div key={i.sku} className="flex items-center justify-between rounded-lg px-3 py-1.5 text-xs" style={{ background: '#F4F6FA' }}>
-                      <span className="font-mono text-[#142D56]">{i.sku}</span>
-                      <span className="text-[#7A8BA0] flex-1 ml-2 truncate">{i.product_name}</span>
-                      <span className="font-bold text-[#0E2040]">× {i.quantity}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {labelPreview && (
               <div>
-                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1.5">Label</div>
-                <img src={labelPreview} alt="label" className="h-24 rounded-lg object-contain border border-[#E8ECF2]" />
+                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1.5">Shipping Label</div>
+                <img src={labelPreview} alt="label" className="h-28 rounded-lg object-contain border border-[#E8ECF2]" />
               </div>
             )}
           </div>
         </div>
-
         <div className="flex gap-3">
-          <button className="btn-ghost flex-1" onClick={() => setStep('form')}>← Back to Edit</button>
+          <button className="btn-ghost flex-1" onClick={() => setStep('form')}>← Back</button>
           <button className="btn-gold flex-1" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? '⏳ Creating…' : '✅ Confirm & Create Order'}
+            {submitting ? '⏳ Creating…' : '✅ Confirm & Submit Order'}
           </button>
         </div>
       </div>
     )
   }
 
-  // ── Form view ──────────────────────────────────────────────────────────────
+  // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 animate-fadeIn">
-      {/* Customer details */}
+      {/* SKU selection */}
       <div>
-        <div className="text-xs font-bold text-[#7A8BA0] uppercase tracking-wide mb-2">Customer Details</div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Customer Name *</label>
-            <input className="kh-input w-full" placeholder="Full name" value={form.customer_name}
-              onChange={e => setField('customer_name', e.target.value)} />
-          </div>
-          <div className="col-span-2">
-            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Delivery Address *</label>
-            <input className="kh-input w-full" placeholder="Street, City" value={form.customer_address}
-              onChange={e => setField('customer_address', e.target.value)} />
-          </div>
-          <div>
-            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Postcode *</label>
-            <input className="kh-input w-full" placeholder="XX0 0XX" value={form.customer_postcode}
-              onChange={e => setField('customer_postcode', e.target.value)} />
-          </div>
-          <div>
-            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Carrier</label>
-            <select className="kh-input w-full" value={form.carrier} onChange={e => setField('carrier', e.target.value)}>
-              {CARRIERS.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Tracking No.</label>
-            <input className="kh-input w-full" placeholder="Optional" value={form.tracking_number}
-              onChange={e => setField('tracking_number', e.target.value)} />
-          </div>
-          <div>
-            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Notes</label>
-            <input className="kh-input w-full" placeholder="Optional" value={form.notes}
-              onChange={e => setField('notes', e.target.value)} />
-          </div>
+        <div className="text-xs font-bold text-[#7A8BA0] uppercase tracking-wide mb-2">
+          Select Products <span className="text-[#C0321E]">*</span>
         </div>
-      </div>
-
-      {/* Items / SKUs */}
-      <div>
-        <div className="text-xs font-bold text-[#7A8BA0] uppercase tracking-wide mb-2">Items</div>
         {sellerInventory.length === 0 ? (
           <p className="text-xs text-[#7A8BA0] italic">No inventory found for your account.</p>
         ) : (
           <div className="space-y-2">
-            <div className="flex gap-2">
-              <select className="kh-input flex-1" defaultValue=""
-                onChange={e => { addSku(e.target.value); e.currentTarget.value = '' }}>
-                <option value="">+ Select SKU to add…</option>
-                {availableSkus.map(i => (
-                  <option key={i.sku} value={i.sku}>
-                    {i.sku} — {i.product_name} ({Math.max(0, i.good_stock - i.reserved)} avail)
-                  </option>
-                ))}
-              </select>
-            </div>
-            {items.map(item => {
-              const inv = sellerInventory.find(i => i.sku === item.sku)
-              return (
-                <div key={item.sku} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: '#F4F6FA', border: '1px solid #E8ECF2' }}>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-mono font-bold text-[#142D56]">{item.sku}</div>
-                    <div className="text-xs text-[#7A8BA0] truncate">{item.product_name}</div>
-                  </div>
-                  {inv && (
-                    <div className="text-[10px] text-[#7A8BA0] whitespace-nowrap">
-                      {Math.max(0, inv.good_stock - inv.reserved)} in stock
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    <label className="text-xs text-[#7A8BA0]">Qty</label>
-                    <input type="number" min={1}
-                      className="kh-input !w-16 !py-1 text-center text-sm"
-                      value={item.quantity}
-                      onChange={e => updateQty(item.sku, parseInt(e.target.value) || 1)} />
-                  </div>
-                  <button className="text-[#C0321E] text-xs hover:underline" onClick={() => removeItem(item.sku)}>✕</button>
-                </div>
-              )
-            })}
+            <select className="kh-input w-full" defaultValue=""
+              onChange={e => { addSku(e.target.value); e.currentTarget.value = '' }}>
+              <option value="">+ Select SKU…</option>
+              {availableSkus.map(i => (
+                <option key={i.sku} value={i.sku}>
+                  {i.sku} — {i.product_name} ({Math.max(0, i.good_stock - i.reserved)} available)
+                </option>
+              ))}
+            </select>
+
+            {items.length > 0 && (
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E8ECF2' }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: '#F8F9FC', borderBottom: '1px solid #E8ECF2' }}>
+                      <th className="text-left px-3 py-2 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">SKU</th>
+                      <th className="text-left px-3 py-2 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Product</th>
+                      <th className="text-center px-3 py-2 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Qty</th>
+                      <th className="text-right px-3 py-2 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Unit Price</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map(item => (
+                      <tr key={item.sku} style={{ borderBottom: '1px solid #F0F4FA' }}>
+                        <td className="px-3 py-2.5 font-mono text-xs font-bold text-[#142D56]">{item.sku}</td>
+                        <td className="px-3 py-2.5 text-xs text-[#4A5A70] max-w-[160px] truncate">{item.product_name}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          <input type="number" min={1} className="kh-input !w-16 !py-1 text-center text-xs"
+                            value={item.quantity} onChange={e => updateItem(item.sku, 'quantity', parseInt(e.target.value) || 1)} />
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="text-xs text-[#7A8BA0]">£</span>
+                            <input type="number" min={0} step={0.01} className="kh-input !w-20 !py-1 text-right text-xs"
+                              value={item.unit_price} onChange={e => updateItem(item.sku, 'unit_price', parseFloat(e.target.value) || 0)} />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <button className="text-[#C0321E] text-xs hover:underline" onClick={() => removeItem(item.sku)}>✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             {items.length === 0 && (
-              <p className="text-xs text-[#7A8BA0] italic">No items added — order will be created without items</p>
+              <p className="text-xs text-[#7A8BA0] italic py-1">No products selected yet</p>
             )}
           </div>
         )}
@@ -319,40 +237,30 @@ function SimpleUpload({ sellerId, sellerInventory, onSuccess }: {
           className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${labelFile ? 'border-[#1A7A48] bg-[#F0FBF4]' : 'border-[#D0D8E4] hover:border-[#C8971A]'}`}
           onClick={() => document.getElementById('simple-label-input')?.click()}
         >
-          <input
-            id="simple-label-input"
-            type="file"
-            accept="image/*,.pdf"
-            className="hidden"
-            onChange={e => e.target.files?.[0] && handleLabelFile(e.target.files[0])}
-          />
+          <input id="simple-label-input" type="file" accept="image/*,.pdf" className="hidden"
+            onChange={e => e.target.files?.[0] && handleLabelFile(e.target.files[0])} />
           {labelPreview ? (
             <div className="flex items-center justify-center gap-3">
               <img src={labelPreview} alt="label" className="h-20 rounded-lg object-contain border border-[#E8ECF2]" />
               <div className="text-left">
                 <div className="text-sm font-semibold text-[#1A7A48]">✓ Label uploaded</div>
                 <div className="text-xs text-[#7A8BA0]">{labelFile?.name}</div>
-                <button className="text-xs text-[#7A8BA0] hover:underline mt-1" onClick={e => { e.stopPropagation(); setLabelFile(null); setLabelPreview('') }}>
-                  Remove
-                </button>
+                <button className="text-xs text-[#7A8BA0] hover:underline mt-1"
+                  onClick={e => { e.stopPropagation(); setLabelFile(null); setLabelPreview('') }}>Remove</button>
               </div>
             </div>
           ) : (
             <>
               <div className="text-2xl mb-1.5">🏷️</div>
               <div className="text-sm font-semibold text-[#0E2040]">Upload shipping label</div>
-              <div className="text-xs text-[#7A8BA0] mt-0.5">PNG, JPG, PDF · Required</div>
+              <div className="text-xs text-[#7A8BA0] mt-0.5">PNG, JPG, PDF · Required before submitting</div>
             </>
           )}
         </div>
       </div>
 
-      {/* Submit */}
-      <div className="flex justify-end pt-1">
-        <button
-          className="btn-gold"
-          onClick={() => { if (validate()) setStep('confirm') }}
-        >
+      <div className="flex justify-end">
+        <button className="btn-gold" onClick={() => { if (validate()) setStep('confirm') }}>
           Review Order →
         </button>
       </div>
