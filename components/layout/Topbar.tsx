@@ -45,8 +45,12 @@ export default function Topbar() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const overdueInvoices = invoices.filter(i => i.status === 'overdue')
   const userRole        = currentUser?.role ?? 'warehouse_staff'
+  const overdueInvoices = invoices.filter(i => i.status === 'overdue')
+
+  useEffect(() => {
+    if (userRole === 'seller') setChatOpen(false)
+  }, [userRole])
   const roleLabel       = ROLE_LABELS[userRole] ?? userRole
   const roleColor       = ROLE_COLORS[userRole] ?? ROLE_COLORS.seller
   const initials        = currentUser ? getInitials(currentUser.name) : '?'
@@ -150,15 +154,17 @@ export default function Topbar() {
           )}
         </div>
 
-        {/* AI Chat */}
-        <button
-          onClick={() => setChatOpen(v => !v)}
-          title="AI Assistant"
-          className="flex items-center justify-center rounded-xl w-9 h-9 text-sm transition-all"
-          style={{ background: chatOpen ? 'rgba(200,151,26,.3)' : 'rgba(255,255,255,.06)', border: `1px solid ${chatOpen ? 'rgba(200,151,26,.6)' : 'rgba(255,255,255,.1)'}` }}
-        >
-          🤖
-        </button>
+        {/* AI Chat — warehouse only */}
+        {userRole !== 'seller' && (
+          <button
+            onClick={() => setChatOpen(v => !v)}
+            title="AI Assistant"
+            className="flex items-center justify-center rounded-xl w-9 h-9 text-sm transition-all"
+            style={{ background: chatOpen ? 'rgba(200,151,26,.3)' : 'rgba(255,255,255,.06)', border: `1px solid ${chatOpen ? 'rgba(200,151,26,.6)' : 'rgba(255,255,255,.1)'}` }}
+          >
+            🤖
+          </button>
+        )}
 
         {/* Avatar */}
         <div

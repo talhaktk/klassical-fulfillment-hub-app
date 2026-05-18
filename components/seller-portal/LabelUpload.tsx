@@ -4,6 +4,13 @@ import { useStore } from '@/store'
 import toast from 'react-hot-toast'
 import type { InventoryItem } from '@/types/database'
 
+interface OrderItem {
+  sku:          string
+  product_name: string
+  quantity:     number
+  unit_price:   number
+}
+
 interface ParsedLabel {
   file_name:         string
   preview_url:       string
@@ -20,23 +27,14 @@ interface ParsedLabel {
   items:             OrderItem[]
 }
 
-interface OrderItem {
-  sku:          string
-  product_name: string
-  quantity:     number
-  unit_price:   number
-}
-
 const CARRIERS = ['Royal Mail', 'DPD', 'Evri', 'Hermes', 'UPS', 'FedEx', 'Amazon Logistics', 'Yodel', 'Parcelforce', 'Other']
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function fileToBase64(file: File): Promise<{ base64: string; mime: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      const base64 = result.split(',')[1]
-      resolve({ base64, mime: file.type })
-    }
+    reader.onload  = () => resolve({ base64: (reader.result as string).split(',')[1], mime: file.type })
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
@@ -45,96 +43,370 @@ async function fileToBase64(file: File): Promise<{ base64: string; mime: string 
 async function pdfToBase64(file: File): Promise<{ base64: string; mime: string }> {
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-
-  const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-  const page = await pdf.getPage(1)
+  const pdf      = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+  const page     = await pdf.getPage(1)
   const viewport = page.getViewport({ scale: 2.0 })
-
-  const canvas  = document.createElement('canvas')
-  canvas.width  = viewport.width
-  canvas.height = viewport.height
-
+  const canvas   = document.createElement('canvas')
+  canvas.width   = viewport.width
+  canvas.height  = viewport.height
   await page.render({ canvasContext: canvas.getContext('2d')! as any, viewport, canvas }).promise
-
-  const dataUrl = canvas.toDataURL('image/png')
-  const base64  = dataUrl.split(',')[1]
-  return { base64, mime: 'image/png' }
+  return { base64: canvas.toDataURL('image/png').split(',')[1], mime: 'image/png' }
 }
 
-type ViewMode = 'edit' | 'confirm'
+// ─── Simple Upload (manual) ───────────────────────────────────────────────────
 
-export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: string; sellerInventory: InventoryItem[] }) {
+function SimpleUpload({ sellerId, sellerInventory, onSuccess }: {
+  sellerId: string
+  sellerInventory: InventoryItem[]
+  onSuccess: () => void
+}) {
+  const { loadOrders } = useStore()
+  const [step,      setStep]    = useState<'form' | 'confirm'>('form')
+  const [submitting,setSubmit]  = useState(false)
+
+  const [form, setForm] = useState({
+    customer_name:     '',
+    customer_address:  '',
+    customer_postcode: '',
+    carrier:           'Royal Mail',
+    tracking_number:   '',
+    notes:             '',
+  })
+  const [items,      setItems]      = useState<OrderItem[]>([])
+  const [labelFile,  setLabelFile]  = useState<File | null>(null)
+  const [labelPreview, setLabelPreview] = useState<string>('')
+
+  function setField(k: keyof typeof form, v: string) {
+    setForm(f => ({ ...f, [k]: v }))
+  }
+
+  function addSku(sku: string) {
+    if (!sku || items.find(i => i.sku === sku)) return
+    const inv = sellerInventory.find(i => i.sku === sku)
+    if (!inv) return
+    setItems(prev => [...prev, { sku, product_name: inv.product_name, quantity: 1, unit_price: inv.unit_price }])
+  }
+
+  function updateQty(sku: string, qty: number) {
+    setItems(prev => prev.map(i => i.sku === sku ? { ...i, quantity: Math.max(1, qty) } : i))
+  }
+
+  function removeItem(sku: string) {
+    setItems(prev => prev.filter(i => i.sku !== sku))
+  }
+
+  async function handleLabelFile(file: File) {
+    setLabelFile(file)
+    if (file.type === 'application/pdf') {
+      const { base64, mime } = await pdfToBase64(file)
+      setLabelPreview(`data:${mime};base64,${base64}`)
+    } else {
+      const reader = new FileReader()
+      reader.onload = () => setLabelPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    }
+  }
+
+  function validate() {
+    if (!form.customer_name.trim())    { toast.error('Customer name is required'); return false }
+    if (!form.customer_address.trim()) { toast.error('Delivery address is required'); return false }
+    if (!form.customer_postcode.trim()){ toast.error('Postcode is required'); return false }
+    if (!labelFile)                    { toast.error('Label upload is required'); return false }
+    return true
+  }
+
+  async function handleSubmit() {
+    setSubmit(true)
+    const res = await fetch('/api/orders/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orders: [{
+          seller_id:         sellerId,
+          customer_name:     form.customer_name,
+          customer_address:  form.customer_address,
+          customer_postcode: form.customer_postcode,
+          carrier:           form.carrier,
+          tracking_number:   form.tracking_number || null,
+          notes:             form.notes || null,
+          items,
+        }],
+      }),
+    })
+    const data = await res.json()
+    if (data.count > 0) {
+      toast.success('Order created successfully')
+      setForm({ customer_name: '', customer_address: '', customer_postcode: '', carrier: 'Royal Mail', tracking_number: '', notes: '' })
+      setItems([])
+      setLabelFile(null)
+      setLabelPreview('')
+      setStep('form')
+      await loadOrders()
+      onSuccess()
+    } else if (data.errors?.length) {
+      data.errors.forEach((e: string) => toast.error(e))
+    }
+    setSubmit(false)
+  }
+
+  const availableSkus = sellerInventory.filter(i => !items.find(it => it.sku === i.sku))
+
+  // ── Confirmation view ──────────────────────────────────────────────────────
+  if (step === 'confirm') {
+    return (
+      <div className="animate-fadeIn">
+        <div className="rounded-xl overflow-hidden mb-5" style={{ border: '2px solid #C8971A' }}>
+          <div className="px-4 py-3" style={{ background: 'rgba(200,151,26,.08)', borderBottom: '1px solid rgba(200,151,26,.25)' }}>
+            <div className="text-sm font-bold text-[#142D56]">✅ Confirm Order</div>
+            <div className="text-xs text-[#7A8BA0] mt-0.5">Review all details before submitting</div>
+          </div>
+          <div className="p-4 space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Customer</div>
+                <div className="font-semibold text-[#0E2040]">{form.customer_name}</div>
+              </div>
+              <div>
+                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Postcode</div>
+                <div className="font-mono text-[#0E2040]">{form.customer_postcode}</div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Address</div>
+                <div className="text-[#0E2040]">{form.customer_address}</div>
+              </div>
+              <div>
+                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Carrier</div>
+                <div>{form.carrier}</div>
+              </div>
+              {form.tracking_number && (
+                <div>
+                  <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide">Tracking</div>
+                  <div className="font-mono text-xs">{form.tracking_number}</div>
+                </div>
+              )}
+            </div>
+
+            {items.length > 0 && (
+              <div>
+                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1.5">Items</div>
+                <div className="space-y-1">
+                  {items.map(i => (
+                    <div key={i.sku} className="flex items-center justify-between rounded-lg px-3 py-1.5 text-xs" style={{ background: '#F4F6FA' }}>
+                      <span className="font-mono text-[#142D56]">{i.sku}</span>
+                      <span className="text-[#7A8BA0] flex-1 ml-2 truncate">{i.product_name}</span>
+                      <span className="font-bold text-[#0E2040]">× {i.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {labelPreview && (
+              <div>
+                <div className="text-xs text-[#7A8BA0] font-semibold uppercase tracking-wide mb-1.5">Label</div>
+                <img src={labelPreview} alt="label" className="h-24 rounded-lg object-contain border border-[#E8ECF2]" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button className="btn-ghost flex-1" onClick={() => setStep('form')}>← Back to Edit</button>
+          <button className="btn-gold flex-1" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? '⏳ Creating…' : '✅ Confirm & Create Order'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Form view ──────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-5 animate-fadeIn">
+      {/* Customer details */}
+      <div>
+        <div className="text-xs font-bold text-[#7A8BA0] uppercase tracking-wide mb-2">Customer Details</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
+            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Customer Name *</label>
+            <input className="kh-input w-full" placeholder="Full name" value={form.customer_name}
+              onChange={e => setField('customer_name', e.target.value)} />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Delivery Address *</label>
+            <input className="kh-input w-full" placeholder="Street, City" value={form.customer_address}
+              onChange={e => setField('customer_address', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Postcode *</label>
+            <input className="kh-input w-full" placeholder="XX0 0XX" value={form.customer_postcode}
+              onChange={e => setField('customer_postcode', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Carrier</label>
+            <select className="kh-input w-full" value={form.carrier} onChange={e => setField('carrier', e.target.value)}>
+              {CARRIERS.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Tracking No.</label>
+            <input className="kh-input w-full" placeholder="Optional" value={form.tracking_number}
+              onChange={e => setField('tracking_number', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-[#7A8BA0] font-semibold mb-1 block">Notes</label>
+            <input className="kh-input w-full" placeholder="Optional" value={form.notes}
+              onChange={e => setField('notes', e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Items / SKUs */}
+      <div>
+        <div className="text-xs font-bold text-[#7A8BA0] uppercase tracking-wide mb-2">Items</div>
+        {sellerInventory.length === 0 ? (
+          <p className="text-xs text-[#7A8BA0] italic">No inventory found for your account.</p>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <select className="kh-input flex-1" defaultValue=""
+                onChange={e => { addSku(e.target.value); e.currentTarget.value = '' }}>
+                <option value="">+ Select SKU to add…</option>
+                {availableSkus.map(i => (
+                  <option key={i.sku} value={i.sku}>
+                    {i.sku} — {i.product_name} ({Math.max(0, i.good_stock - i.reserved)} avail)
+                  </option>
+                ))}
+              </select>
+            </div>
+            {items.map(item => {
+              const inv = sellerInventory.find(i => i.sku === item.sku)
+              return (
+                <div key={item.sku} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: '#F4F6FA', border: '1px solid #E8ECF2' }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-mono font-bold text-[#142D56]">{item.sku}</div>
+                    <div className="text-xs text-[#7A8BA0] truncate">{item.product_name}</div>
+                  </div>
+                  {inv && (
+                    <div className="text-[10px] text-[#7A8BA0] whitespace-nowrap">
+                      {Math.max(0, inv.good_stock - inv.reserved)} in stock
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs text-[#7A8BA0]">Qty</label>
+                    <input type="number" min={1}
+                      className="kh-input !w-16 !py-1 text-center text-sm"
+                      value={item.quantity}
+                      onChange={e => updateQty(item.sku, parseInt(e.target.value) || 1)} />
+                  </div>
+                  <button className="text-[#C0321E] text-xs hover:underline" onClick={() => removeItem(item.sku)}>✕</button>
+                </div>
+              )
+            })}
+            {items.length === 0 && (
+              <p className="text-xs text-[#7A8BA0] italic">No items added — order will be created without items</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Label upload — required */}
+      <div>
+        <div className="text-xs font-bold text-[#7A8BA0] uppercase tracking-wide mb-2">
+          Shipping Label <span className="text-[#C0321E]">*</span>
+        </div>
+        <div
+          className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${labelFile ? 'border-[#1A7A48] bg-[#F0FBF4]' : 'border-[#D0D8E4] hover:border-[#C8971A]'}`}
+          onClick={() => document.getElementById('simple-label-input')?.click()}
+        >
+          <input
+            id="simple-label-input"
+            type="file"
+            accept="image/*,.pdf"
+            className="hidden"
+            onChange={e => e.target.files?.[0] && handleLabelFile(e.target.files[0])}
+          />
+          {labelPreview ? (
+            <div className="flex items-center justify-center gap-3">
+              <img src={labelPreview} alt="label" className="h-20 rounded-lg object-contain border border-[#E8ECF2]" />
+              <div className="text-left">
+                <div className="text-sm font-semibold text-[#1A7A48]">✓ Label uploaded</div>
+                <div className="text-xs text-[#7A8BA0]">{labelFile?.name}</div>
+                <button className="text-xs text-[#7A8BA0] hover:underline mt-1" onClick={e => { e.stopPropagation(); setLabelFile(null); setLabelPreview('') }}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="text-2xl mb-1.5">🏷️</div>
+              <div className="text-sm font-semibold text-[#0E2040]">Upload shipping label</div>
+              <div className="text-xs text-[#7A8BA0] mt-0.5">PNG, JPG, PDF · Required</div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Submit */}
+      <div className="flex justify-end pt-1">
+        <button
+          className="btn-gold"
+          onClick={() => { if (validate()) setStep('confirm') }}
+        >
+          Review Order →
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Bulk Upload (AI) ─────────────────────────────────────────────────────────
+
+function BulkUpload({ sellerId, sellerInventory }: { sellerId: string; sellerInventory: InventoryItem[] }) {
   const { loadOrders, loadInventory } = useStore()
-  const [labels,    setLabels]    = useState<ParsedLabel[]>([])
-  const [dragging,  setDragging]  = useState(false)
-  const [creating,  setCreating]  = useState(false)
-  const [viewMode,  setViewMode]  = useState<ViewMode>('edit')
+  const [labels,   setLabels]   = useState<ParsedLabel[]>([])
+  const [dragging, setDragging] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [viewMode, setViewMode] = useState<'edit' | 'confirm'>('edit')
 
   const isParsing   = labels.some(l => l.parsing)
   const readyLabels = labels.filter(l => !l.parsing && !l.parse_error && l.customer_name)
   const readyCount  = readyLabels.length
 
   const processFiles = useCallback(async (files: FileList | File[]) => {
-    const fileArr = Array.from(files)
-    const accepted = fileArr.filter(f =>
-      f.type.startsWith('image/') || f.type === 'application/pdf'
-    )
-    if (accepted.length === 0) {
-      toast.error('Please upload image or PDF files only')
-      return
-    }
+    const accepted = Array.from(files).filter(f => f.type.startsWith('image/') || f.type === 'application/pdf')
+    if (accepted.length === 0) { toast.error('Please upload image or PDF files only'); return }
 
     const placeholders: ParsedLabel[] = accepted.map(f => ({
       file_name: f.name, preview_url: '', image_base64: '', mime_type: f.type,
       parsing: true, parse_error: null,
       customer_name: '', customer_address: '', customer_postcode: '',
-      carrier: 'Royal Mail', tracking_number: '', notes: '',
-      items: [],
+      carrier: 'Royal Mail', tracking_number: '', notes: '', items: [],
     }))
     setLabels(prev => [...prev, ...placeholders])
     setViewMode('edit')
-
     const startIdx = labels.length
 
     for (let i = 0; i < accepted.length; i++) {
       const file = accepted[i]
       const idx  = startIdx + i
-
       try {
-        const { base64, mime } = file.type === 'application/pdf'
-          ? await pdfToBase64(file)
-          : await fileToBase64(file)
-
+        const { base64, mime } = file.type === 'application/pdf' ? await pdfToBase64(file) : await fileToBase64(file)
         const preview = `data:${mime};base64,${base64}`
-
-        const res = await fetch('/api/parse-label', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res  = await fetch('/api/parse-label', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_base64: base64, mime_type: mime }),
         })
-
-        const data = await res.json()
-        const lbl  = data.label ?? {}
-
+        const lbl = (await res.json()).label ?? {}
         setLabels(prev => prev.map((p, j) => j === idx ? {
-          ...p,
-          preview_url:       preview,
-          image_base64:      base64,
-          mime_type:         mime,
-          parsing:           false,
-          parse_error:       null,
-          customer_name:     lbl.customer_name     ?? '',
-          customer_address:  lbl.customer_address  ?? '',
-          customer_postcode: lbl.customer_postcode ?? '',
-          carrier:           lbl.carrier           ?? 'Royal Mail',
-          tracking_number:   lbl.tracking_number   ?? '',
-          notes:             lbl.order_reference ? `Ref: ${lbl.order_reference}` : '',
+          ...p, preview_url: preview, image_base64: base64, mime_type: mime, parsing: false, parse_error: null,
+          customer_name: lbl.customer_name ?? '', customer_address: lbl.customer_address ?? '',
+          customer_postcode: lbl.customer_postcode ?? '', carrier: lbl.carrier ?? 'Royal Mail',
+          tracking_number: lbl.tracking_number ?? '',
+          notes: lbl.order_reference ? `Ref: ${lbl.order_reference}` : '',
         } : p))
       } catch (err: any) {
-        setLabels(prev => prev.map((p, j) => j === idx ? {
-          ...p, parsing: false, parse_error: err.message ?? 'Failed to parse',
-        } : p))
+        setLabels(prev => prev.map((p, j) => j === idx ? { ...p, parsing: false, parse_error: err.message ?? 'Failed to parse' } : p))
       }
     }
   }, [labels.length])
@@ -147,9 +419,7 @@ export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: s
     const inv = sellerInventory.find(i => i.sku === sku)
     if (!inv) return
     setLabels(prev => prev.map((l, i) => i === idx ? {
-      ...l,
-      items: l.items.find(it => it.sku === sku)
-        ? l.items
+      ...l, items: l.items.find(it => it.sku === sku) ? l.items
         : [...l.items, { sku, product_name: inv.product_name, quantity: 1, unit_price: inv.unit_price }]
     } : l))
   }
@@ -161,84 +431,62 @@ export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: s
   }
 
   function removeItem(labelIdx: number, sku: string) {
-    setLabels(prev => prev.map((l, i) => i === labelIdx ? {
-      ...l, items: l.items.filter(it => it.sku !== sku)
-    } : l))
+    setLabels(prev => prev.map((l, i) => i === labelIdx ? { ...l, items: l.items.filter(it => it.sku !== sku) } : l))
   }
 
-  function removeLabel(idx: number) {
-    setLabels(prev => prev.filter((_, i) => i !== idx))
-  }
+  function removeLabel(idx: number) { setLabels(prev => prev.filter((_, i) => i !== idx)) }
 
   async function createOrders() {
-    if (readyCount === 0) {
-      toast.error('No valid labels to create orders from')
-      return
-    }
-
+    if (readyCount === 0) { toast.error('No valid labels to create orders from'); return }
     setCreating(true)
     const res = await fetch('/api/orders/batch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         orders: readyLabels.map(l => ({
-          seller_id:         sellerId,
-          customer_name:     l.customer_name,
-          customer_address:  l.customer_address,
-          customer_postcode: l.customer_postcode,
-          carrier:           l.carrier,
-          tracking_number:   l.tracking_number || null,
-          notes:             l.notes || null,
-          items:             l.items,
+          seller_id: sellerId, customer_name: l.customer_name,
+          customer_address: l.customer_address, customer_postcode: l.customer_postcode,
+          carrier: l.carrier, tracking_number: l.tracking_number || null,
+          notes: l.notes || null, items: l.items,
         })),
       }),
     })
-
     const data = await res.json()
     if (data.count > 0) {
-      toast.success(`${data.count} order${data.count > 1 ? 's' : ''} created successfully`)
-      setLabels([])
-      setViewMode('edit')
+      toast.success(`${data.count} order${data.count > 1 ? 's' : ''} created`)
+      setLabels([]); setViewMode('edit')
       await Promise.all([loadOrders(), loadInventory()])
     }
-    if (data.errors?.length) {
-      data.errors.forEach((e: string) => toast.error(e))
-    }
+    data.errors?.forEach((e: string) => toast.error(e))
     setCreating(false)
   }
 
   return (
-    <div>
+    <div className="animate-fadeIn">
+      <div className="rounded-lg px-3 py-2 mb-4 text-xs flex items-center gap-2" style={{ background: 'rgba(200,151,26,.08)', border: '1px solid rgba(200,151,26,.25)', color: '#9E7410' }}>
+        🤖 AI scans each label and extracts customer details automatically. Review before confirming.
+      </div>
+
       {/* Drop zone */}
       <div
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${dragging ? 'border-[#C8971A] bg-[#FFF9EE]' : 'border-[#D0D8E4] hover:border-[#C8971A]'}`}
+        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer mb-5 ${dragging ? 'border-[#C8971A] bg-[#FFF9EE]' : 'border-[#D0D8E4] hover:border-[#C8971A]'}`}
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); processFiles(e.dataTransfer.files) }}
-        onClick={() => document.getElementById('label-file-input')?.click()}
+        onClick={() => document.getElementById('bulk-label-input')?.click()}
       >
-        <input
-          id="label-file-input"
-          type="file"
-          multiple
-          accept="image/*,.pdf"
-          className="hidden"
-          onChange={e => e.target.files && processFiles(e.target.files)}
-        />
+        <input id="bulk-label-input" type="file" multiple accept="image/*,.pdf" className="hidden"
+          onChange={e => e.target.files && processFiles(e.target.files)} />
         <div className="text-3xl mb-2">📁</div>
-        <p className="font-semibold text-[#0E2040]">Drop label files here or click to browse</p>
-        <p className="text-xs text-[#7A8BA0] mt-1">PNG, JPG, WEBP, PDF — multiple files supported</p>
-        <p className="text-xs text-[#C8971A] mt-1 font-medium">AI scans each label · Review all orders before confirming</p>
+        <p className="font-semibold text-[#0E2040]">Drop multiple label files here or click to browse</p>
+        <p className="text-xs text-[#7A8BA0] mt-1">PNG, JPG, WEBP, PDF · AI reads all automatically</p>
       </div>
 
-      {/* Parsed labels */}
       {labels.length > 0 && (
-        <div className="mt-5">
-          {/* Mode toggle */}
+        <div>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <h3 className="font-bold text-[#0E2040]">
-                {labels.length} label{labels.length > 1 ? 's' : ''} loaded
+                {labels.length} label{labels.length > 1 ? 's' : ''}
                 {isParsing && <span className="ml-2 text-xs text-[#C8971A] animate-pulse">· Scanning…</span>}
               </h3>
               {readyCount > 0 && (
@@ -248,88 +496,54 @@ export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: s
               )}
             </div>
             {readyCount > 0 && !isParsing && (
-              <div className="flex gap-2">
-                <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #E8ECF2' }}>
-                  <button
-                    onClick={() => setViewMode('edit')}
-                    className="px-3 py-1.5 text-xs font-semibold transition-all"
-                    style={viewMode === 'edit' ? { background: '#142D56', color: 'white' } : { color: '#7A8BA0' }}
-                  >
-                    ✏️ Edit Labels
-                  </button>
-                  <button
-                    onClick={() => setViewMode('confirm')}
-                    className="px-3 py-1.5 text-xs font-semibold transition-all"
-                    style={viewMode === 'confirm' ? { background: '#142D56', color: 'white' } : { color: '#7A8BA0' }}
-                  >
-                    ✅ Review & Confirm
-                  </button>
-                </div>
+              <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #E8ECF2' }}>
+                <button onClick={() => setViewMode('edit')} className="px-3 py-1.5 text-xs font-semibold transition-all"
+                  style={viewMode === 'edit' ? { background: '#142D56', color: 'white' } : { color: '#7A8BA0' }}>
+                  ✏️ Edit
+                </button>
+                <button onClick={() => setViewMode('confirm')} className="px-3 py-1.5 text-xs font-semibold transition-all"
+                  style={viewMode === 'confirm' ? { background: '#142D56', color: 'white' } : { color: '#7A8BA0' }}>
+                  ✅ Review & Confirm
+                </button>
               </div>
             )}
           </div>
 
-          {/* ── CONFIRMATION TABLE ── */}
           {viewMode === 'confirm' && (
             <div>
               <div className="rounded-xl overflow-hidden mb-4" style={{ border: '2px solid #C8971A' }}>
-                <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'rgba(200,151,26,.08)', borderBottom: '1px solid rgba(200,151,26,.25)' }}>
-                  <div>
-                    <div className="text-sm font-bold text-[#142D56]">📋 Order Confirmation</div>
-                    <div className="text-xs text-[#7A8BA0] mt-0.5">Review all {readyCount} orders below. Delete or go back to edit before confirming.</div>
-                  </div>
+                <div className="px-4 py-3" style={{ background: 'rgba(200,151,26,.08)', borderBottom: '1px solid rgba(200,151,26,.25)' }}>
+                  <div className="text-sm font-bold text-[#142D56]">📋 {readyCount} Orders Ready</div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr style={{ background: '#F8F9FC', borderBottom: '1px solid #E8ECF2' }}>
-                        <th className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">#</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Customer</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Address</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Postcode</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Carrier</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Items</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">Tracking</th>
-                        <th className="px-4 py-2.5"></th>
+                        {['#', 'Customer', 'Address', 'Postcode', 'Carrier', 'Items', 'Tracking', ''].map(h => (
+                          <th key={h} className="text-left px-4 py-2.5 text-xs font-bold text-[#7A8BA0] uppercase tracking-wide">{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {labels.map((label, idx) => {
                         if (label.parsing || label.parse_error || !label.customer_name) return null
                         return (
-                          <tr key={idx} className="border-b border-[#F0F4FA] hover:bg-[#FAFBFD] transition-colors">
+                          <tr key={idx} className="border-b border-[#F0F4FA]">
                             <td className="px-4 py-3 text-xs font-mono text-[#7A8BA0]">{idx + 1}</td>
                             <td className="px-4 py-3">
                               <div className="font-semibold text-[#0E2040] text-xs">{label.customer_name}</div>
-                              {label.preview_url && (
-                                <img src={label.preview_url} alt="" className="w-8 h-8 rounded object-cover mt-1 border border-[#E8ECF2]" />
-                              )}
+                              {label.preview_url && <img src={label.preview_url} alt="" className="w-8 h-8 rounded object-cover mt-1 border border-[#E8ECF2]" />}
                             </td>
                             <td className="px-4 py-3 text-xs text-[#7A8BA0] max-w-[160px] truncate">{label.customer_address || '—'}</td>
                             <td className="px-4 py-3 text-xs font-mono text-[#142D56]">{label.customer_postcode || '—'}</td>
                             <td className="px-4 py-3 text-xs">{label.carrier}</td>
-                            <td className="px-4 py-3">
-                              {label.items.length === 0 ? (
-                                <span className="text-[10px] text-[#C8971A]">No items</span>
-                              ) : (
-                                <div className="space-y-0.5">
-                                  {label.items.map(it => (
-                                    <div key={it.sku} className="text-[10px]">
-                                      <span className="font-mono text-[#142D56]">{it.sku}</span>
-                                      <span className="text-[#7A8BA0] ml-1">× {it.quantity}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                            <td className="px-4 py-3 text-[10px]">
+                              {label.items.length === 0 ? <span className="text-[#C8971A]">No items</span>
+                                : label.items.map(it => <div key={it.sku}><span className="font-mono text-[#142D56]">{it.sku}</span><span className="text-[#7A8BA0] ml-1">× {it.quantity}</span></div>)}
                             </td>
                             <td className="px-4 py-3 text-xs font-mono text-[#7A8BA0]">{label.tracking_number || '—'}</td>
                             <td className="px-4 py-3">
-                              <button
-                                onClick={() => removeLabel(idx)}
-                                className="text-xs text-[#C0321E] hover:underline font-semibold whitespace-nowrap"
-                              >
-                                ✕ Remove
-                              </button>
+                              <button onClick={() => removeLabel(idx)} className="text-xs text-[#C0321E] hover:underline font-semibold">✕</button>
                             </td>
                           </tr>
                         )
@@ -338,80 +552,49 @@ export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: s
                   </table>
                 </div>
               </div>
-
-              {/* Error labels info */}
-              {labels.some(l => l.parse_error || (!l.parsing && !l.customer_name)) && (
-                <div className="mb-4 px-4 py-3 rounded-lg text-xs" style={{ background: 'rgba(192,50,30,.08)', border: '1px solid rgba(192,50,30,.25)', color: '#C0321E' }}>
-                  ⚠️ {labels.filter(l => l.parse_error || (!l.parsing && !l.customer_name)).length} label(s) have errors and will NOT be created — go back to edit view to fix them.
-                </div>
-              )}
-
               <div className="flex gap-3 justify-end">
-                <button
-                  className="btn-ghost"
-                  onClick={() => setViewMode('edit')}
-                >
-                  ← Back to Edit
-                </button>
-                <button
-                  className="btn-gold"
-                  onClick={createOrders}
-                  disabled={creating || readyCount === 0}
-                >
-                  {creating
-                    ? '⏳ Creating orders…'
-                    : `✅ Confirm & Create ${readyCount} Order${readyCount !== 1 ? 's' : ''}`}
+                <button className="btn-ghost" onClick={() => setViewMode('edit')}>← Back</button>
+                <button className="btn-gold" onClick={createOrders} disabled={creating || readyCount === 0}>
+                  {creating ? '⏳ Creating…' : `✅ Confirm & Create ${readyCount} Order${readyCount !== 1 ? 's' : ''}`}
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── EDIT VIEW ── */}
           {viewMode === 'edit' && (
             <div className="space-y-4">
               {labels.map((label, idx) => (
                 <div key={idx} className="kh-card" style={{ border: label.parse_error ? '1px solid #C0321E' : '1px solid #E8ECF2' }}>
                   <div className="flex items-start gap-4">
-                    {/* Thumbnail */}
                     <div className="flex-shrink-0">
                       {label.parsing ? (
-                        <div className="w-20 h-20 rounded-lg bg-[#F4F6FA] flex items-center justify-center animate-pulse">
-                          <span className="text-xs text-[#7A8BA0]">Parsing…</span>
-                        </div>
+                        <div className="w-20 h-20 rounded-lg bg-[#F4F6FA] flex items-center justify-center animate-pulse text-xs text-[#7A8BA0]">Scanning…</div>
                       ) : label.preview_url ? (
-                        <img src={label.preview_url} alt={label.file_name} className="w-20 h-20 rounded-lg object-cover border border-[#E8ECF2]" />
+                        <img src={label.preview_url} alt="" className="w-20 h-20 rounded-lg object-cover border border-[#E8ECF2]" />
                       ) : (
                         <div className="w-20 h-20 rounded-lg bg-[#F4F6FA] flex items-center justify-center text-2xl">📄</div>
                       )}
                     </div>
-
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-mono text-[#7A8BA0] truncate">{label.file_name}</span>
-                        <button className="text-xs text-[#C0321E] hover:underline ml-2 flex-shrink-0" onClick={() => removeLabel(idx)}>✕ Remove</button>
+                        <button className="text-xs text-[#C0321E] hover:underline ml-2" onClick={() => removeLabel(idx)}>✕ Remove</button>
                       </div>
-
-                      {label.parsing && (
-                        <p className="text-sm text-[#7A8BA0] animate-pulse">Scanning label with AI…</p>
-                      )}
-
-                      {label.parse_error && (
-                        <p className="text-sm text-[#C0321E]">⚠ {label.parse_error} — edit fields manually below</p>
-                      )}
-
+                      {label.parsing && <p className="text-sm text-[#7A8BA0] animate-pulse">Scanning with AI…</p>}
+                      {label.parse_error && <p className="text-sm text-[#C0321E]">⚠ {label.parse_error} — edit manually below</p>}
                       {!label.parsing && (
                         <div className="grid grid-cols-2 gap-2.5">
                           <div>
                             <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">Customer Name</label>
-                            <input className="kh-input w-full !py-1.5 text-xs" value={label.customer_name} onChange={e => updateLabel(idx, 'customer_name', e.target.value)} placeholder="Full name" />
+                            <input className="kh-input w-full !py-1.5 text-xs" value={label.customer_name} onChange={e => updateLabel(idx, 'customer_name', e.target.value)} />
                           </div>
                           <div>
                             <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">Postcode</label>
-                            <input className="kh-input w-full !py-1.5 text-xs" value={label.customer_postcode} onChange={e => updateLabel(idx, 'customer_postcode', e.target.value)} placeholder="XX0 0XX" />
+                            <input className="kh-input w-full !py-1.5 text-xs" value={label.customer_postcode} onChange={e => updateLabel(idx, 'customer_postcode', e.target.value)} />
                           </div>
                           <div className="col-span-2">
-                            <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">Delivery Address</label>
-                            <input className="kh-input w-full !py-1.5 text-xs" value={label.customer_address} onChange={e => updateLabel(idx, 'customer_address', e.target.value)} placeholder="Street address" />
+                            <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">Address</label>
+                            <input className="kh-input w-full !py-1.5 text-xs" value={label.customer_address} onChange={e => updateLabel(idx, 'customer_address', e.target.value)} />
                           </div>
                           <div>
                             <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">Carrier</label>
@@ -421,44 +604,26 @@ export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: s
                           </div>
                           <div>
                             <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">Tracking No.</label>
-                            <input className="kh-input w-full !py-1.5 text-xs" value={label.tracking_number} onChange={e => updateLabel(idx, 'tracking_number', e.target.value)} placeholder="Optional" />
+                            <input className="kh-input w-full !py-1.5 text-xs" value={label.tracking_number} onChange={e => updateLabel(idx, 'tracking_number', e.target.value)} />
                           </div>
-
                           <div className="col-span-2">
-                            <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">Items / SKUs</label>
-                            <div className="flex gap-2 mb-2">
-                              <select
-                                className="kh-input flex-1 !py-1.5 text-xs"
-                                defaultValue=""
-                                onChange={e => { if (e.target.value) { addItem(idx, e.target.value); e.target.value = '' } }}
-                              >
-                                <option value="">+ Add SKU…</option>
-                                {sellerInventory.filter(i => !label.items.find(it => it.sku === i.sku)).map(i => (
-                                  <option key={i.sku} value={i.sku}>{i.sku} — {i.product_name} ({i.good_stock - i.reserved} avail)</option>
-                                ))}
-                              </select>
-                            </div>
-                            {label.items.length > 0 && (
-                              <div className="space-y-1">
-                                {label.items.map(item => (
-                                  <div key={item.sku} className="flex items-center gap-2 bg-[#F4F6FA] rounded-lg px-2.5 py-1.5">
-                                    <span className="text-xs font-mono text-[#142D56] flex-1">{item.sku}</span>
-                                    <span className="text-xs text-[#7A8BA0] flex-1">{item.product_name}</span>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      className="kh-input !w-16 !py-1 text-xs text-center"
-                                      value={item.quantity}
-                                      onChange={e => updateItemQty(idx, item.sku, parseInt(e.target.value) || 1)}
-                                    />
-                                    <button className="text-[#C0321E] text-xs hover:underline" onClick={() => removeItem(idx, item.sku)}>✕</button>
-                                  </div>
-                                ))}
+                            <label className="text-[10px] text-[#7A8BA0] font-semibold uppercase tracking-wide block mb-1">SKU / Items</label>
+                            <select className="kh-input w-full !py-1.5 text-xs mb-2" defaultValue=""
+                              onChange={e => { if (e.target.value) { addItem(idx, e.target.value); e.target.value = '' } }}>
+                              <option value="">+ Add SKU…</option>
+                              {sellerInventory.filter(i => !label.items.find(it => it.sku === i.sku)).map(i => (
+                                <option key={i.sku} value={i.sku}>{i.sku} — {i.product_name} ({i.good_stock - i.reserved} avail)</option>
+                              ))}
+                            </select>
+                            {label.items.map(item => (
+                              <div key={item.sku} className="flex items-center gap-2 bg-[#F4F6FA] rounded-lg px-2.5 py-1.5 mb-1">
+                                <span className="text-xs font-mono text-[#142D56] flex-1">{item.sku}</span>
+                                <span className="text-xs text-[#7A8BA0] flex-1 truncate">{item.product_name}</span>
+                                <input type="number" min={1} className="kh-input !w-16 !py-1 text-xs text-center"
+                                  value={item.quantity} onChange={e => updateItemQty(idx, item.sku, parseInt(e.target.value) || 1)} />
+                                <button className="text-[#C0321E] text-xs" onClick={() => removeItem(idx, item.sku)}>✕</button>
                               </div>
-                            )}
-                            {label.items.length === 0 && (
-                              <p className="text-xs text-[#7A8BA0] italic">No items assigned — order will be created without items</p>
-                            )}
+                            ))}
                           </div>
                         </div>
                       )}
@@ -466,14 +631,9 @@ export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: s
                   </div>
                 </div>
               ))}
-
-              {/* Review button */}
               {readyCount > 0 && !isParsing && (
                 <div className="flex justify-end pt-2">
-                  <button
-                    className="btn-gold"
-                    onClick={() => setViewMode('confirm')}
-                  >
+                  <button className="btn-gold" onClick={() => setViewMode('confirm')}>
                     Review {readyCount} Order{readyCount !== 1 ? 's' : ''} →
                   </button>
                 </div>
@@ -481,6 +641,53 @@ export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: s
             </div>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+type Mode = 'simple' | 'bulk'
+
+export default function LabelUpload({ sellerId, sellerInventory }: { sellerId: string; sellerInventory: InventoryItem[] }) {
+  const [mode, setMode] = useState<Mode>('simple')
+  const [done, setDone] = useState(false)
+
+  return (
+    <div>
+      {/* Mode toggle */}
+      <div className="flex gap-1 p-1 rounded-xl mb-5 w-fit" style={{ background: '#F0F4FA' }}>
+        <button
+          onClick={() => setMode('simple')}
+          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          style={mode === 'simple'
+            ? { background: 'white', color: '#0E2040', boxShadow: '0 1px 4px rgba(10,22,40,.1)' }
+            : { color: '#7A8BA0' }}
+        >
+          📝 Simple Upload
+        </button>
+        <button
+          onClick={() => setMode('bulk')}
+          className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          style={mode === 'bulk'
+            ? { background: 'white', color: '#0E2040', boxShadow: '0 1px 4px rgba(10,22,40,.1)' }
+            : { color: '#7A8BA0' }}
+        >
+          🤖 Bulk Upload (AI)
+        </button>
+      </div>
+
+      {mode === 'simple' && (
+        <SimpleUpload
+          sellerId={sellerId}
+          sellerInventory={sellerInventory}
+          onSuccess={() => setDone(true)}
+        />
+      )}
+
+      {mode === 'bulk' && (
+        <BulkUpload sellerId={sellerId} sellerInventory={sellerInventory} />
       )}
     </div>
   )
